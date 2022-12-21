@@ -1,0 +1,44 @@
+{
+  "name": "breadboard",
+  "version": "0.0.1",
+  "description": "",
+  "email": "cocktailpeanuts@proton.me",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder -mwl",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "build": {
+    "appId": "net.candywrap.breadboard",
+    "mac": {
+      "category": "utility"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32"
+          ]
+        }
+      ]
+    }
+  },
+  "author": "https://twitter.com/cocktailpeanut",
+  "license": "MIT",
+  "dependencies": {
+    "electron-context-menu": "^3.6.1",
+    "exifr": "^7.1.3",
+    "express": "^4.18.2",
+    "fastq": "^1.14.0",
+    "getport": "^0.1.0",
+    "png-metadata": "^1.0.2"
+  },
+  "devDependencies": {
+    "electron": "^22.0.0",
+    "electron-builder": "^23.6.0"
+  }
+}
