@@ -14,7 +14,7 @@ Browse, search, and manage all AI generated images on your machine, in one place
 
 Pick the version for your OS and download here:
 
-https://github.com/skogard/breadboard/releases
+https://github.com/cocktailpeanut/breadboard/releases
 
 <br>
 
