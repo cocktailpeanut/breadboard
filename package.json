@@ -12,8 +12,33 @@
   },
   "build": {
     "appId": "net.candywrap.breadboard",
+    "extraResources": ["./script/**"],
+    "dmg": {
+      "background": "./assets/background.png",
+      "contents": [{
+        "x": 130,
+        "y": 250
+      }, {
+        "x": 410,
+        "y": 80,
+        "type": "file",
+        "path": "./script/patch.command"
+      }, {
+        "x": 410,
+        "y": 250,
+        "type": "link",
+        "path": "/Applications"
+      }]
+    },
     "mac": {
-      "category": "utility"
+      "category": "utility",
+      "target": [{
+        "target": "default",
+        "arch": [
+          "x64",
+          "arm64"
+        ]
+      }]
     },
     "win": {
       "target": [

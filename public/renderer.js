@@ -52,6 +52,9 @@ document.querySelector("#home").addEventListener('click', async (e) => {
 })
 document.querySelector("#sync").addEventListener('click', async (e) => {
   e.target.classList.add("disabled")
+  await synchronize()
+})
+const synchronize = async () => {
   document.querySelector("#sync").disabled = true
   document.querySelector("#sync i").classList.add("fa-spin")
   let folderpaths = await db.folders.toArray()
@@ -80,7 +83,7 @@ document.querySelector("#sync").addEventListener('click', async (e) => {
     await search()
   }
   await render()
-})
+}
 const renderHelp = async () => {
   document.querySelector(".content").classList.add("hidden")
   document.querySelector(".settings").classList.add("hidden")
@@ -348,6 +351,5 @@ const init = async () => {
   }
 }
 init().then(async () => {
-  search()
-  render()
+  await synchronize()
 })
