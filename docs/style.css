@@ -30,7 +30,7 @@ section.cover .cover-main {
   font-size: 14px !important;
 }
 section.cover {
-  background: white;
+  background: rgba(0,0,100,0.05);
 }
 section.cover h1 {
   margin: 0 !important;
