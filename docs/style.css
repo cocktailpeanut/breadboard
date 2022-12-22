@@ -9,7 +9,6 @@ body {
   font-family: "Helvetica Neue", helvetica, arial, "sans serif";
 }
 section.cover .cover-main {
-  background: white;
   margin: 0 auto;
   box-sizing: border-box;
   padding-top: 50px;
@@ -28,9 +27,6 @@ section.cover .cover-main {
   text-transform: uppercase;
   font-family: Sans-serif !important;
   font-size: 14px !important;
-}
-section.cover {
-  background: rgba(0,0,100,0.05);
 }
 section.cover h1 {
   margin: 0 !important;
@@ -169,7 +165,7 @@ a.btn {
   text-decoration: none;
 }
 section.cover.show {
-  background: white !important;
+  background: rgba(0,0,100,0.05) !important;
 }
 .videoWrapper {
   position: relative;
