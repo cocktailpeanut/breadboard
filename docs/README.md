@@ -39,7 +39,7 @@ It will ask you to enter your system password, in order to
 
 ![patch.gif](patch.gif)
 
-The patch script is ncessary in order to avoid Apple's "Gatekeeper" feature that disallows opening apps that were not published through Apple's own App Store. It is completely secure, and you can check the script code yourself (it's just one line): [script/patch.command](script/patch.command)
+The patch script is ncessary in order to avoid Apple's "Gatekeeper" feature that disallows opening apps that were not published through Apple's own App Store. It is completely secure, and you can check the script code yourself (it's just one line): [script/patch.command](https://github.com/cocktailpeanut/breadboard/blob/main/script/patch.command)
 
 > Learn more here: https://apple.stackexchange.com/questions/436674/how-to-unblock-binary-from-use-because-mac-says-it-is-not-from-identified-develo
 

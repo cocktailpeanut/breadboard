@@ -28,8 +28,14 @@ section.cover .cover-main {
   font-family: Sans-serif !important;
   font-size: 14px !important;
 }
+section.cover h1 img {
+  vertical-align: text-bottom;
+  height: 45px;
+  width: 45px;
+}
 section.cover h1 {
   margin: 0 !important;
+  color: black;
 }
 section.cover p {
   font-size: 14px;
