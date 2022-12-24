@@ -6,7 +6,7 @@ var worker = new Worker("./worker.js")
 var db = new Dexie("breadboard")
 db.version(1).stores({
   //files: "app, model, prompt, sampler, weight, steps, cfg_scale, height, width, seed, negative_prompt, mtime, ctime, &filename",
-  files: "filename, app, prompt, ctime, *tokens",
+  files: "filename, model, app, prompt, ctime, *tokens",
   folders: "&name",
   checkpoints: "&app, ctime"
 })
@@ -23,6 +23,11 @@ db.version(1).stores({
 //});
 
 var counter
+var sorter = {
+  direction: -1,
+  column: "ctime",
+  compare: 0
+};
 //document.querySelector("#cancel-selected").addEventListener("click", async (e) => {
 //  ds.clearSelection()  
 //  document.querySelector("footer").classList.add("hidden")
@@ -43,6 +48,39 @@ document.querySelector("#delete-selected").addEventListener("click", async (e) =
   document.querySelector("footer").classList.add("hidden")
   selectedEls = []
   ds.clearSelection()
+})
+document.querySelector("nav select").addEventListener("change", async (e) => {
+  if (e.target.value === "1") {
+    sorter = {
+      direction: -1,
+      column: "ctime",
+      compare: 0, // numeric compare
+    }
+  } else if (e.target.value === "2") {
+    sorter = {
+      direction: 1,
+      column: "ctime",
+      compare: 0, // numeric compare
+    }
+  } else if (e.target.value === "3") {
+    sorter = {
+      direction: 1,
+      column: "prompt",
+      compare: 1, // alphabetical compare
+    }
+  } else if (e.target.value === "4") {
+    sorter = {
+      direction: -1,
+      column: "prompt",
+      compare: 1, // alphabetical compare
+    }
+  }
+  let query = document.querySelector(".search").value
+  if (query && query.length > 0) {
+    await search(query)
+  } else {
+    await search()
+  }
 })
 document.querySelector("#help").addEventListener('click', async (e) => {
   await renderHelp()
@@ -92,7 +130,7 @@ const renderHelp = async () => {
     name: "discord",
     description: "ask questions and share feedback",
     icon: "fa-brands fa-discord",
-    href: "https://discord.gg/dZywHttS"
+    href: "https://discord.gg/6MJ6MQScnX"
   }, {
     name: "twitter",
     description: "stay updated on Twitter",
@@ -177,7 +215,7 @@ document.querySelector(".container").ondragstart = (event) => {
   window.electronAPI.startDrag(filenames)
 }
 
-function debounce(func, timeout = 300){
+function debounce(func, timeout = 1000){
   let timer;
   return (...args) => {
     clearTimeout(timer);
@@ -189,16 +227,130 @@ const card = (meta) => {
   let attributes = Object.keys(meta).map((key) => {
     return { key, val: meta[key] }
   })
-  let times = `<tr><td>created</td><td>${timeago.format(meta.ctime)}</td></tr>
-<tr><td>modified</td><td>${timeago.format(meta.mtime)}</td></tr>`
-  let trs = attributes.map((attr) => {
-    return `<tr><td>${attr.key}</td><td>${attr.val}</td></tr>`
+  let times = `<tr><td>created</td><td>${timeago.format(meta.ctime)}</td><td></td></tr>
+<tr><td>modified</td><td>${timeago.format(meta.mtime)}</td><td></td></tr>`
+  let trs = attributes.filter((attr) => {
+    return attr.key !== "app" && attr.key !== "tokens"
+  }).map((attr) => {
+    let el
+    if (attr.key === "model" && attr.val) {
+      el = `<span class='token' data-value="${attr.val}">${attr.val}</span>`
+    } else if (attr.key === "prompt" && attr.val) {
+      let tokens = attr.val.split(" ").filter(x => x.length > 0)
+      let els = []
+      for(let token of tokens) {
+        els.push(`<span class='token' data-value="${token}">${token}</span>`)
+      }
+      el = els.join(" ")
+    } else if (attr.key === "filename" && attr.val) {
+      let tokens = attr.val.split(/[\/\\]/).filter(x => x.length > 0)
+      let els = []
+      for(let token of tokens) {
+        els.push(`<span class='token' data-value="${token}">${token}</span>`)
+      }
+      el = els.join("/")
+      
+    } else {
+      el = attr.val
+    }
+
+    return `<tr data-key="${attr.key}"><td>${attr.key}</td><td>${el}</td><td class='copy-td'><button class='copy-text' data-value="${attr.val}"><i class="fa-regular fa-clone"></i> <span>copy</span></button></td></tr>`
   }).join("")
   return `<img loading='lazy' data-src="${meta.filename}" src="/file?file=${meta.filename}">
 <div class='col'>
   <h4>${meta.prompt}</h4>
   <table>${times}${trs}</table>
-</div>`
+</div>
+<button class='gofullscreen'><i class="fa-solid fa-expand"></i></button>`
+}
+
+const stripPunctuation = (str) => {
+  return str.replace(/[^\p{L}\s]/gu,"")
+}
+
+const includeSearch = (key, val) => {
+  console.log("includeSearch", key, val)
+  // find the key in query
+  let query = document.querySelector(".search").value
+  let t = query.split(" ").filter(x => x.length > 0)
+  console.log("t", t)
+
+  // find prompt search tokens (no :)
+  let existingPromptTokens = []
+  let existingAdvancedTokens = []
+
+
+  let changed
+
+  // 1. split the t array into existingPromptTokens and existingAdvancedTokens array
+  for(let token of t) {
+    if (/[^:]+:/.test(token)) {
+      existingAdvancedTokens.push(token)
+    } else {
+      existingPromptTokens.push(token)
+    }
+  }
+
+  let existingPrompts = JSON.stringify(existingPromptTokens)
+  let existingAdvanced = JSON.stringify(existingAdvancedTokens)
+
+
+  if (key === "prompt") {
+    // 2. if the 'key' filter is 'prompt'
+      // find whether the 'val' is included in the existingPromptTokens array
+      // if it is included, don't do anything
+      // if it's not included, append it to existingPromptTokens array
+    let exists
+    let cleaned = stripPunctuation(val)
+    for(let i=0; i<existingPromptTokens.length; i++) {
+      let token = existingPromptTokens[i]
+      console.log({ token, cleaned })
+      if (token === cleaned) {
+        exists = true
+      }
+    }
+    if (!exists) {
+      existingPromptTokens.push(cleaned)
+    }
+  } else {
+    // 3. if the 'key' filter is not 'prompt'
+      // find whether the existingAdvancedTokens array contains any of the 'key' filter
+      // if it does, replace the existingAdvancedTokens array with the new 'key' filter
+      // if it doesn't, append the 'key' filter to the end of the existingAdvancedTokens array
+    let exists
+    for(let i=0; i<existingAdvancedTokens.length; i++) {
+      let token = existingAdvancedTokens[i]
+      if (token.startsWith(key + ":")) {
+        existingAdvancedTokens[i] = key + ":" + val
+        exists = true
+      }
+    }
+    if (!exists) {
+      existingAdvancedTokens.push(key + ":" + val) 
+    }
+  }
+
+
+
+  let result = []
+  for(let token of existingPromptTokens) {
+    result.push(token)
+  }
+  for(let token of existingAdvancedTokens) {
+    result.push(token)
+  }
+  console.log("result", result)
+
+
+  if (existingPrompts === JSON.stringify(existingPromptTokens) && existingAdvanced === JSON.stringify(existingAdvancedTokens)) {
+    // do nothing because they are identical before and after
+  } else {
+    // there's a change. re render
+    document.querySelector(".search").value = result.join(" ")
+    document.querySelector(".search").dispatchEvent(new Event('input'))
+  }
+    
+
 }
 
 
@@ -223,9 +375,38 @@ document.querySelector(".container").addEventListener("click", async (e) => {
   e.preventDefault()
   e.stopPropagation()
   let colTarget = (e.target.classList.contains(".col") ? e.target : e.target.closest(".col"))
-  if (colTarget && e.target.closest(".card.expanded")) {
+  let fullscreenTarget = (e.target.classList.contains(".gofullscreen") ? e.target : e.target.closest(".gofullscreen"))
+  let clipboardTarget = (e.target.classList.contains(".copy-text") ? e.target : e.target.closest(".copy-text"))
+  let tokenTarget = (e.target.classList.contains(".token") ? e.target : e.target.closest(".token"))
+  let card = (e.target.classList.contains("card") ? e.target : e.target.closest(".card"))
+  if (card) card.classList.remove("fullscreen")
+  if (fullscreenTarget && e.target.closest(".card.expanded")) {
+    card.classList.remove("expanded")
+    card.classList.add("fullscreen")
+  } else if (tokenTarget && e.target.closest(".card.expanded")) {
+    let key = tokenTarget.closest("tr").getAttribute("data-key")
+    let val = tokenTarget.getAttribute("data-value")
+    includeSearch(key, val)
+  } else if (colTarget && e.target.closest(".card.expanded")) {
     // if clicked inside the .col section when NOT expanded, don't do anything.
+    // except the clipboard button
     // if the clicked element is the delete button, delete
+    if (clipboardTarget) {
+      window.electronAPI.copy(clipboardTarget.getAttribute("data-value"))
+      clipboardTarget.querySelector("i").classList.remove("fa-regular")
+      clipboardTarget.querySelector("i").classList.remove("fa-clone")
+      clipboardTarget.querySelector("i").classList.add("fa-solid")
+      clipboardTarget.querySelector("i").classList.add("fa-check")
+      clipboardTarget.querySelector("span").innerHTML = "copied"
+
+      setTimeout(() => {
+        clipboardTarget.querySelector("i").classList.remove("fa-solid")
+        clipboardTarget.querySelector("i").classList.remove("fa-check")
+        clipboardTarget.querySelector("i").classList.add("fa-regular")
+        clipboardTarget.querySelector("i").classList.add("fa-clone")
+        clipboardTarget.querySelector("span").innerHTML = "copy"
+      }, 1000)
+    }
   } else {
     let target = (e.target.classList.contains("card") ? e.target : e.target.closest(".card"))
     if (target) {
@@ -336,7 +517,7 @@ worker.onmessage = function(e) {
   });
 }
 const search = (query) => {
-  worker.postMessage(query)
+  worker.postMessage({ query, sorter })
 }
 const render = () => {
   document.querySelector(".content").classList.remove("hidden")

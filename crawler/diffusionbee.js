@@ -40,6 +40,7 @@ exif {
 */
 
 const path = require('path');
+const { fdir } = require("fdir");
 const os = require('os');
 const fs = require('fs');
 const meta = require('png-metadata')
@@ -89,7 +90,12 @@ class Diffusionbee {
   async sync(checkpoint, cb) {
     let files
     try {
-      files = await fs.promises.readdir(this.folderpath)
+      //files = await fs.promises.readdir(this.folderpath)
+      files = await new fdir()
+        .glob("**/*.png")
+        .withBasePath()
+        .crawl(this.folderpath)
+        .withPromise()
     } catch (e) {
       await cb({
         app: this.folderpath,

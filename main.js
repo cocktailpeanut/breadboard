@@ -1,4 +1,4 @@
-const {app, shell, BrowserWindow, ipcMain, dialog, session} = require('electron')
+const {app, shell, BrowserWindow, ipcMain, dialog, session, clipboard } = require('electron')
 const contextMenu = require('electron-context-menu');
 const path = require('path')
 const fs = require('fs')
@@ -12,7 +12,7 @@ contextMenu({ showSaveImageAs: true });
 var mainWindow;
 function createWindow (port) {
   mainWindow = new BrowserWindow({
-    titleBarStyle: 'hidden',
+//    titleBarStyle: 'hidden',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
     }
@@ -77,6 +77,9 @@ app.whenReady().then(async () => {
       path.resolve(home, "invokeai", "outputs"),
       path.resolve(home, ".diffusionbee", "images"),
     ]
+  })
+  ipcMain.handle('copy', (event, text) => {
+    clipboard.writeText(text)
   })
 
   createWindow(port)

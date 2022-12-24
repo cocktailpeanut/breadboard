@@ -117,6 +117,8 @@ class Parser {
     let steps
     if (options && options.steps) {
       steps = options.steps
+    } else if (e.Steps) {
+      steps = e.Steps
     } else if (e.steps) {
       steps = e.steps
     }
@@ -135,11 +137,23 @@ class Parser {
       }]
     }
 
+    let model
+    if (options && options.model) {
+      model = options.model
+    } else if (e.model_version) {
+      model = e.model_version
+    } else if (e.model_weights) {
+      model = e.model_weights
+    } else if (e.Model) {
+      model = e.Model
+    }
+
+
+
   //"model_weights": "stable-diffusion-1.5",
     return {
-      model: e.model,
-      model_weights: e.model_weights,
-      model_hash: e.model_hash,
+      model,
+//      model_hash: e.model_hash,
       app_id: e.app_id,
       app_version: e.app_version,
       image: {
@@ -155,17 +169,11 @@ class Parser {
     }
   }
   flatten (app, converted, filepath, ctime, mtime) {
-    let model
-    if (converted.model_weights) {
-      model = converted.model_weights
-    } else if (converted.model_version) {
-      model = converted.model_version
-    }
     return {
       //app: S.escape(app),
       app,
       //model: (model ? S.escape(model) : 'NULL'),
-      model,
+      model: converted.model,
       //sampler: (converted.image.sampler ? S.escape(converted.image.sampler) : 'NULL'),
       sampler: converted.image.sampler,
       //prompt: (converted.image.prompt[0].prompt ? S.escape(converted.image.prompt[0].prompt) : 'NULL'),

@@ -17,6 +17,9 @@ contextBridge.exposeInMainWorld('electronAPI',{
   select: () => {
     return ipcRenderer.invoke("select")
   },
+  copy: (text) => {
+    return ipcRenderer.invoke("copy", text)
+  },
   defaults: () => {
     return ipcRenderer.invoke("defaults")
   }

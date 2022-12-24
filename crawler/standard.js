@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { fdir } = require("fdir");
 const Parser = require('./parser')
 const parser = new Parser()
 class Standard {
@@ -11,7 +12,12 @@ class Standard {
   async sync(checkpoint, cb) {
     let files
     try {
-      files = await fs.promises.readdir(this.folderpath)
+      files = await new fdir()
+        .glob("**/*.png")
+        .withBasePath()
+        .crawl(this.folderpath)
+        .withPromise()
+//      files = await fs.promises.readdir(this.folderpath)
     } catch (e) {
       await cb({
         app: this.folderpath,
