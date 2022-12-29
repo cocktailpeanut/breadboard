@@ -1,4 +1,44 @@
 //var bar = new ProgressBar.Line('.container', {easing: 'easeInOut', duration: 0});
+
+
+async function persist() {
+  if (!navigator.storage || !navigator.storage.persisted) {
+    console.log("#1")
+    return "never";
+  }
+  let persisted = await navigator.storage.persisted();
+  if (persisted) {
+    console.log("#2")
+    return "persisted";
+  }
+  if (!navigator.permissions || !navigator.permissions.query) {
+    console.log("#3")
+    return "prompt"; // It MAY be successful to prompt. Don't know.
+  }
+  const permission = await navigator.permissions.query({
+    name: "persistent-storage"
+  });
+  if (permission.state === "granted") {
+    console.log("#4")
+    persisted = await navigator.storage.persist();
+    if (persisted) {
+      console.log("#5")
+      return "persisted";
+    } else {
+      console.log("#6")
+      throw new Error("Failed to persist");
+    }
+  }
+  if (permission.state === "prompt") {
+    console.log("#7")
+    return "prompt";
+  }
+  console.log("#8")
+  return "never";
+}
+
+
+var forceSynchronize = false;
 var bar = new Nanobar({
   target: document.querySelector(".container")
 });
@@ -6,38 +46,31 @@ var worker = new Worker("./worker.js")
 var db = new Dexie("breadboard")
 db.version(1).stores({
   //files: "app, model, prompt, sampler, weight, steps, cfg_scale, height, width, seed, negative_prompt, mtime, ctime, &filename",
-  files: "filename, model, app, prompt, ctime, *tokens",
+  //files: "path, model, app, prompt, ctime, *tokens",
+  files: "file_path, model_name, root_path, prompt, btime, *tokens",
   folders: "&name",
-  checkpoints: "&app, ctime"
+  checkpoints: "&root_path, btime"
 })
-//db.files.hook("creating", function (primKey, obj, trans) {
-//  if (typeof obj.prompt === 'string') {
-//    var wordSet = obj.prompt.split(' ').reduce(function (prev, current) {
-//      if (current.length > 0) prev[current] = true;
-//      return prev;
-//    }, {});
-//    obj.tokens = Object.keys(wordSet);
-//  } else {
-//    obj.tokens = []
-//  }
-//});
-
 var counter
 var sorter = {
   direction: -1,
-  column: "ctime",
+  column: "btime",
   compare: 0
 };
-//document.querySelector("#cancel-selected").addEventListener("click", async (e) => {
-//  ds.clearSelection()  
-//  document.querySelector("footer").classList.add("hidden")
-//})
-document.querySelector("#delete-selected").addEventListener("click", async (e) => {
+let tagInput = document.querySelector('#tag-field')
+let tags = tagger(tagInput, {
+  allow_duplicates: false,
+  allow_spaces: false,
+  add_on_blur: true,
+  wrap: true,
+});
+
+const deleteSelection = async () => {
   let selected = selectedEls.map((el) => {
     return el.getAttribute("data-src")
   })
   await window.electronAPI.del(selected)
-  let res = await db.files.where("filename").anyOf(selected).delete()
+  let res = await db.files.where("file_path").anyOf(selected).delete()
   for(let el of selectedEls) {
     el.classList.remove("expanded")
     el.classList.add("removed")
@@ -48,18 +81,74 @@ document.querySelector("#delete-selected").addEventListener("click", async (e) =
   document.querySelector("footer").classList.add("hidden")
   selectedEls = []
   ds.clearSelection()
+}
+document.querySelector("#save-tags").addEventListener("click", async (e) => {
+
+  let tags = tagInput.value.split(",")
+  let selected = selectedEls.map((el) => {
+    return el.getAttribute("data-src")
+  })
+  let response = await window.electronAPI.gm({
+    cmd: "set",
+    args: [
+      selected,
+      [{
+        key: "dc:subject",
+        val: tags,
+        mode: "merge"
+      }]
+    ]
+  })
+  console.log("response", response)
+  let items = tags.map((x) => {
+    return "tag:" + x
+  })
+  let paths = selectedEls.map((el) => {
+    return {
+      file_path: el.getAttribute("data-src"),
+      root_path: el.getAttribute("data-root")
+    }
+  })
+  await synchronize(paths, async () => {
+    document.querySelector("footer").classList.add("hidden")
+    selectedEls = []
+    document.querySelector(".status").innerHTML = ""
+    let query = items.join(" ")
+    document.querySelector(".search").value = query
+    if (query && query.length > 0) {
+      await search(query)
+    } else {
+      await search()
+    }
+    bar.go(100)
+  })
+
+//  let selected = selectedEls.map((el) => {
+//    return el.getAttribute("data-src")
+//  })
+//  await db.files.where("file_path").anyOf(selected).modify((x) => {
+//    // get the existing tokens SANS the new tokens
+//    let tokens = x.tokens.filter((token) => {
+//      return !items.includes(token)
+//    })
+//    x.tokens = tokens.concat(items)
+//  });
+
+})
+document.querySelector("#delete-selected").addEventListener("click", async (e) => {
+  await deleteSelection()
 })
 document.querySelector("nav select").addEventListener("change", async (e) => {
   if (e.target.value === "1") {
     sorter = {
       direction: -1,
-      column: "ctime",
+      column: "btime",
       compare: 0, // numeric compare
     }
   } else if (e.target.value === "2") {
     sorter = {
       direction: 1,
-      column: "ctime",
+      column: "btime",
       compare: 0, // numeric compare
     }
   } else if (e.target.value === "3") {
@@ -92,38 +181,66 @@ document.querySelector("#sync").addEventListener('click', async (e) => {
   e.target.classList.add("disabled")
   await synchronize()
 })
-const synchronize = async () => {
+
+var syncComplete;
+const synchronize = async (paths, cb) => {
+  await render()
   document.querySelector("#sync").disabled = true
   document.querySelector("#sync i").classList.add("fa-spin")
-  let folderpaths = await db.folders.toArray()
-  for(let folderpath of folderpaths) {
-    let app = folderpath.name
-    let c = await checkpoint(app)
-    document.querySelector(".status").innerHTML = "synchronizing from " + app
+  if (paths) {
+    document.querySelector(".status").innerHTML = "synchronizing..."
     counter = 0
+    syncComplete = false
     await new Promise((resolve, reject) => {
-      window.electronAPI.sync(app, c)
+      window.electronAPI.sync({ paths })
       let interval = setInterval(() => {
-        if (counter <= 0) {
+        console.log("counter", counter, syncComplete)
+        if (syncComplete) {
           clearInterval(interval)
           resolve()
         }
       }, 1000)
     })
-  }
-  counter = 0
-  document.querySelector(".status").innerHTML = ""
-  bar.go(100)
-  let query = document.querySelector(".search").value
-  if (query && query.length > 0) {
-    await search(query)
+    if (cb) {
+      await cb()
+    }
   } else {
-    await search()
+    let folderpaths = await db.folders.toArray()
+    for(let folderpath of folderpaths) {
+      let root_path = folderpath.name
+      let c = await checkpoint(root_path)
+      document.querySelector(".status").innerHTML = "synchronizing from " + root_path
+      counter = 0
+      syncComplete = false
+      await new Promise((resolve, reject) => {
+        window.electronAPI.sync({
+          root_path,
+          checkpoint: c,
+          force: forceSynchronize
+        })
+        let interval = setInterval(() => {
+          console.log("counter", counter, syncComplete)
+          if (syncComplete) {
+            clearInterval(interval)
+            resolve()
+          }
+        }, 1000)
+      })
+    }
+    counter = 0
+    document.querySelector(".status").innerHTML = ""
+    bar.go(100)
+    let query = document.querySelector(".search").value
+    if (query && query.length > 0) {
+      await search(query)
+    } else {
+      await search()
+    }
   }
-  await render()
+//  await render()
 }
 const renderHelp = async () => {
-  document.querySelector(".content").classList.add("hidden")
+  document.querySelector(".container").classList.add("hidden")
   document.querySelector(".settings").classList.add("hidden")
   document.querySelector(".help").classList.remove("hidden")
   let res = [{
@@ -157,7 +274,7 @@ ${rows}
 </main>`
 }
 const renderSettings = async () => {
-  document.querySelector(".content").classList.add("hidden")
+  document.querySelector(".container").classList.add("hidden")
   document.querySelector(".help").classList.add("hidden")
   document.querySelector(".settings").classList.remove("hidden")
 
@@ -168,16 +285,41 @@ const renderSettings = async () => {
     <div>${r.name}</div><div class='flexible'></div><button class='del' data-name='${r.name}'><i class="fa-regular fa-trash-can"></i></button>
 </div>`
   }).join("")
+
+  let rows2 = [{
+    name: "Hard refresh",
+  }].map((r) => {
+    return `<div class='row'><div>Re-index the files from scratch, just like when you first ran the app.</div></div>`
+  }).join("")
+
   document.querySelector(".settings").innerHTML = `<main>
   <div class='header'>
-    <h2>Settings</h2>
+    <h2>Tracked Folders</h2>
     <div class='flexible'></div>
     <button id='select'>Add a folder</button>
   </div>
-<div class='rows'>
-${rows}
-</div>
+  <div class='rows'>
+  ${rows}
+  </div>
+  <br><br>
+  <div class='header'>
+    <h2>Re-index</h2>
+    <div class='flexible'></div>
+    <button id='reindex'><i class="fa-solid fa-rotate"></i> Re-index</button>
+  </div>
+  <div class='rows'>
+  ${rows2}
+  </div>
 </main>`
+  document.querySelector("#reindex").addEventListener("click", async () => {
+    // reset the indexedDB
+    await db.files.clear()
+    await db.checkpoints.clear()
+    // force synchronize
+    forceSynchronize = true
+    await synchronize()
+    forceSynchronize = false
+  })
   document.querySelector("#select").addEventListener('click', async () => {
     let paths = await window.electronAPI.select()
     for(let name of paths) {
@@ -227,14 +369,29 @@ const card = (meta) => {
   let attributes = Object.keys(meta).map((key) => {
     return { key, val: meta[key] }
   })
-  let times = `<tr><td>created</td><td>${timeago.format(meta.ctime)}</td><td></td></tr>
+  let times = `<tr><td>created</td><td>${timeago.format(meta.btime)}</td><td></td></tr>
 <tr><td>modified</td><td>${timeago.format(meta.mtime)}</td><td></td></tr>`
   let trs = attributes.filter((attr) => {
-    return attr.key !== "app" && attr.key !== "tokens"
+    //return attr.key !== "app" && attr.key !== "tokens"
+    return attr.key !== "root_path"
   }).map((attr) => {
     let el
-    if (attr.key === "model" && attr.val) {
+    if (attr.key === "model_name" && attr.val) {
       el = `<span class='token' data-value="${attr.val}">${attr.val}</span>`
+    } else if (attr.key === "tokens" && attr.val && attr.val.length > 0) {
+      let els = attr.val.filter((x) => {
+        return x.startsWith("tag:")
+      }).map((x) => {
+        return `<span>
+<button data-tag="${x}" class='tag-item'><i class="fa-solid fa-tag"></i> ${x.replace("tag:", "")}</button>
+<button data-tag="${x}" class='del-item'><i class="fa-solid fa-xmark"></i></button>
+</span>`
+      })
+      el = els.join("")
+      attr.key = "tags"
+      if (els.length > 0) {
+        console.log("el", el)
+      }
     } else if (attr.key === "prompt" && attr.val) {
       let tokens = attr.val.split(" ").filter(x => x.length > 0)
       let els = []
@@ -242,30 +399,35 @@ const card = (meta) => {
         els.push(`<span class='token' data-value="${token}">${token}</span>`)
       }
       el = els.join(" ")
-    } else if (attr.key === "filename" && attr.val) {
+    } else if (attr.key === "file_path" && attr.val) {
       let tokens = attr.val.split(/[\/\\]/).filter(x => x.length > 0)
       let els = []
       for(let token of tokens) {
         els.push(`<span class='token' data-value="${token}">${token}</span>`)
       }
       el = els.join("/")
-      
     } else {
       el = attr.val
     }
 
-    return `<tr data-key="${attr.key}"><td>${attr.key}</td><td>${el}</td><td class='copy-td'><button class='copy-text' data-value="${attr.val}"><i class="fa-regular fa-clone"></i> <span>copy</span></button></td></tr>`
+    if (attr.key === "tags") {
+      return `<tr data-key="${attr.key}"><td>${attr.key}</td><td>${el}</td><td class='edit-td'><button class='edit-tags' data-value="${attr.val}"><i class="fa-solid fa-pen-to-square"></i> <span>edit</span></button></td></tr>`
+    } else if (attr.key === "file_path") {
+      return `<tr data-key="${attr.key}"><td>${attr.key}</td><td>${el}</td><td class='edit-td'><button class='copy-text' data-value="${attr.val}"><i class="fa-regular fa-clone"></i> <span>copy</span></button><button data-src="${attr.val}" class='open-file'><i class="fa-solid fa-up-right-from-square"></i> <span>open</span></button></td></tr>`
+    } else {
+      return `<tr data-key="${attr.key}"><td>${attr.key}</td><td>${el}</td><td class='copy-td'><button class='copy-text' data-value="${attr.val}"><i class="fa-regular fa-clone"></i> <span>copy</span></button></td></tr>`
+    }
   }).join("")
-  return `<img loading='lazy' data-src="${meta.filename}" src="/file?file=${meta.filename}">
+  return `<img loading='lazy' data-root="${meta.root_path}" data-src="${meta.file_path}" src="/file?file=${encodeURIComponent(meta.file_path)}">
 <div class='col'>
-  <h4>${meta.prompt}</h4>
+  <h4 class='flex'>${meta.prompt}</h4>
   <table>${times}${trs}</table>
 </div>
 <button class='gofullscreen'><i class="fa-solid fa-expand"></i></button>`
 }
 
 const stripPunctuation = (str) => {
-  return str.replace(/[^\p{L}\s]/gu,"")
+  return str.replace(/(^[^\p{L}\s]|[^\p{L}\s]$)/gu,"")
 }
 
 const includeSearch = (key, val) => {
@@ -301,7 +463,8 @@ const includeSearch = (key, val) => {
       // if it is included, don't do anything
       // if it's not included, append it to existingPromptTokens array
     let exists
-    let cleaned = stripPunctuation(val)
+    // tag: doesn't need to be cleaned. only search keywords need to be cleaned
+    let cleaned = (val.startsWith("tag:") ? val : stripPunctuation(val))
     for(let i=0; i<existingPromptTokens.length; i++) {
       let token = existingPromptTokens[i]
       console.log({ token, cleaned })
@@ -346,8 +509,10 @@ const includeSearch = (key, val) => {
     // do nothing because they are identical before and after
   } else {
     // there's a change. re render
-    document.querySelector(".search").value = result.join(" ")
-    document.querySelector(".search").dispatchEvent(new Event('input'))
+    let newQuery = result.join(" ")
+    document.querySelector(".search").value = newQuery
+    search(newQuery)
+    //document.querySelector(".search").dispatchEvent(new Event('input'))
   }
     
 
@@ -355,20 +520,25 @@ const includeSearch = (key, val) => {
 
 
 window.electronAPI.onMsg(async (_event, value) => {
+  console.log("MSG", value)
   let div = document.createElement("div")
   div.className = "card"
   queueMicrotask(async () => {
-    counter++;
     if (value.meta) {
       let response = await insert(value.meta).catch((e) => {
         console.log("ERROR", e)
       })
     }
-    counter--
-    let ratio = value.progress/value.total
-    if (ratio < 1) {
-      bar.go(100*value.progress/value.total);
+    counter++;
+    console.log("counter, total", counter, value.total)
+    if (counter === value.total) {
+      syncComplete = true 
     }
+    console.log("counter", counter)
+    let ratio = value.progress/value.total
+//    if (ratio < 1) {
+      bar.go(100*value.progress/value.total);
+//    }
   })
 })
 document.querySelector(".container").addEventListener("click", async (e) => {
@@ -377,16 +547,27 @@ document.querySelector(".container").addEventListener("click", async (e) => {
   let colTarget = (e.target.classList.contains(".col") ? e.target : e.target.closest(".col"))
   let fullscreenTarget = (e.target.classList.contains(".gofullscreen") ? e.target : e.target.closest(".gofullscreen"))
   let clipboardTarget = (e.target.classList.contains(".copy-text") ? e.target : e.target.closest(".copy-text"))
+  let editTagsTarget = (e.target.classList.contains(".edit-tags") ? e.target : e.target.closest(".edit-tags"))
   let tokenTarget = (e.target.classList.contains(".token") ? e.target : e.target.closest(".token"))
+  let tagTarget = (e.target.classList.contains(".tag-item") ? e.target : e.target.closest(".tag-item"))
+  let openFileTarget = (e.target.classList.contains(".open-file") ? e.target : e.target.closest(".open-file"))
   let card = (e.target.classList.contains("card") ? e.target : e.target.closest(".card"))
   if (card) card.classList.remove("fullscreen")
   if (fullscreenTarget && e.target.closest(".card.expanded")) {
     card.classList.remove("expanded")
     card.classList.add("fullscreen")
+  } else if (openFileTarget && e.target.closest(".card.expanded")) {
+    console.log("OPEN")
+    window.electronAPI.open(openFileTarget.getAttribute("data-src"))
   } else if (tokenTarget && e.target.closest(".card.expanded")) {
     let key = tokenTarget.closest("tr").getAttribute("data-key")
     let val = tokenTarget.getAttribute("data-value")
     includeSearch(key, val)
+  } else if (tagTarget && e.target.closest(".card.expanded")) {
+    let tag = tagTarget.getAttribute("data-tag")
+    includeSearch("prompt", tag)
+  } else if (editTagsTarget && e.target.closest(".card.expanded")) {
+    editTagsTarget.closest("tr").classList.toggle("edit-mode")
   } else if (colTarget && e.target.closest(".card.expanded")) {
     // if clicked inside the .col section when NOT expanded, don't do anything.
     // except the clipboard button
@@ -415,62 +596,136 @@ document.querySelector(".container").addEventListener("click", async (e) => {
   }
 })
 
+hotkeys("shift+left,shift+up", function(e) {
+  if (selectedEls && selectedEls.length > 0) {
+    let prev = selectedEls[0].previousSibling
+    if (prev) {
+      e.preventDefault()
+      e.stopPropagation()
+      selectedEls = [prev].concat(selectedEls)
+      ds.setSelection(selectedEls)
+      prev.scrollIntoView({ behavior: "smooth", block: "end" })
+      updateSelection(selectedEls)
+    }
+  }
+  console.log("left")
+})
+hotkeys("shift+right,shift+down", function(e) {
+  console.log("right")
+  if (selectedEls && selectedEls.length > 0) {
+    let next = selectedEls[selectedEls.length-1].nextSibling
+    if (next) {
+      e.preventDefault()
+      e.stopPropagation()
+      selectedEls = selectedEls.concat(next)
+      ds.setSelection(selectedEls)
+      next.scrollIntoView({ behavior: "smooth", block: "start" })
+      updateSelection(selectedEls)
+    }
+  }
+})
+hotkeys("left,up", function(e) {
+  if (selectedEls && selectedEls.length > 0) {
+    let prev = selectedEls[0].previousSibling
+    if (prev) {
+      e.preventDefault()
+      e.stopPropagation()
+      selectedEls = [prev]
+      ds.setSelection(selectedEls)
+      prev.scrollIntoView({ behavior: "smooth", block: "end" })
+      updateSelection(selectedEls)
+    }
+  }
+  console.log("left")
+})
+hotkeys("right,down", function(e) {
+  console.log("right")
+  if (selectedEls && selectedEls.length > 0) {
+    let next = selectedEls[selectedEls.length-1].nextSibling
+    if (next) {
+      e.preventDefault()
+      e.stopPropagation()
+      selectedEls = [next]
+      ds.setSelection(selectedEls)
+      next.scrollIntoView({ behavior: "smooth", block: "end" })
+      updateSelection(selectedEls)
+    }
+  }
+})
+hotkeys("delete,backspace", async function(e) {
+  console.log("delete")
+  await deleteSelection()
+})
+hotkeys("escape", function(e) {
+  for(let el of selectedEls) {
+    el.classList.remove("expanded")
+    el.classList.remove("fullscreen")
+  }
+  selectedEls = [] 
+  ds.setSelection(selectedEls)
+  updateSelection(selectedEls)
+})
+hotkeys("enter", function(e) {
+  if (selectedEls && selectedEls.length > 0) {
+    let target = selectedEls[0]
+    if (target) {
+      e.preventDefault()
+      e.stopPropagation()
+      target.classList.toggle("expanded")
+      target.scrollIntoView({ behavior: "smooth", block: "end" })
+    }
+  }
+})
+
 
 var compiledInsert;
-const checkpoint = async (folderpath) => {
-  let cp = await db.checkpoints.where({ app: folderpath }).first()
-  if (cp) return cp.ctime
+const checkpoint = async (root_path) => {
+  let cp = await db.checkpoints.where({ root_path }).first()
+  if (cp) return cp.btime
   else return null
 }
 
 
 let checkpoints = { }
 
-const updateCheckpoint = async (app, ctime) => {
-  let cp = await db.checkpoints.put({ app, ctime })
-  checkpoints[app] = ctime
+const updateCheckpoint = async (root_path, btime) => {
+  let cp = await db.checkpoints.put({ root_path, btime })
+  checkpoints[root_path] = btime
 }
 const insert = async (o) => {
 
+  console.log("insert", o)
+
   let tokens = []
+  let wordSet = {}
   if (o.prompt && typeof o.prompt === 'string' && o.prompt.length > 0) {
-    let wordSet = o.prompt.split(' ').reduce(function (prev, current) {
+    wordSet = o.prompt.split(' ').reduce(function (prev, current) {
       if (current.length > 0) prev[current] = true;
       return prev;
     }, {});
-    tokens = Object.keys(wordSet);
   }
+  if (o.subject) {
+    for(let k of o.subject) {
+      wordSet["tag:" + k] = true
+    }
+  }
+  tokens = Object.keys(wordSet);
+  console.log("tokens", tokens)
 
-  await db.files.put({
-    app: (o.app),
-    model: (o.model ? o.model : null),
-    prompt: (o.prompt ? o.prompt : null),
-    sampler: (o.sampler ? o.sampler : null),
-    weight: (o.weight ? o.weight : null),
-    steps: (o.steps ? o.steps : null),
-    cfg_scale: (o.cfg_scale ? o.cfg_scale : null),
-    height: (o.height ? o.height : null),
-    width: (o.width ? o.width : null),
-    seed: (o.seed ? o.seed : null),
-    negative_prompt: (o.negative_prompt ? o.negative_prompt : null),
-    mtime: (o.mtime ? o.mtime : null),
-    ctime: (o.ctime ? o.ctime: null),
-    filename: (o.filename),
-    tokens
-  })
+  await db.files.put({ ...o, tokens })
 
-  if (checkpoints[o.app]) {
-    if (checkpoints[o.app] < o.ctime) {
-      await updateCheckpoint(o.app, o.ctime)
+  if (checkpoints[o.root_path]) {
+    if (checkpoints[o.root_path] < o.btime) {
+      await updateCheckpoint(o.root_path, o.btime)
     }
   } else {
-    let cp = await db.checkpoints.where({ app: o.app }).first()   
+    let cp = await db.checkpoints.where({ root_path: o.root_path }).first()   
     if (cp) {
-      if (cp < o.ctime) {
-        await updateCheckpoint(o.app, o.ctime)
+      if (cp < o.btime) {
+        await updateCheckpoint(o.root_path, o.btime)
       }
     } else {
-      await updateCheckpoint(o.app, o.ctime)
+      await updateCheckpoint(o.root_path, o.btime)
     }
   }
 }
@@ -480,10 +735,24 @@ var selectedEls = []
 var ds;
 var rendered
 var settingsRendered
+const updateSelection = (items) => {
+  let tagItems = tagInput.value.split(",")
+  for(let tagItem of tagItems) {
+    tags.remove_tag(tagItem)
+  }
+  document.querySelector("#delete-selected").innerHTML = "<i class='fa-regular fa-trash-can'></i> Delete " + items.length + " items"
+  selectedEls = items
+  if (items.length > 0) {
+    document.querySelector("footer").classList.remove("hidden")
+  } else {
+    document.querySelector("footer").classList.add("hidden")
+  }
+}
 worker.onmessage = function(e) {
   let res = e.data
+  console.log("Res", res)
   document.querySelector(".content").innerHTML = res.map((item) => {
-    return `<div class='card' data-src="${item.filename}">${card(item)}</div>`
+    return `<div class='card' data-root="${item.root_path}" data-src="${item.file_path}">${card(item)}</div>`
   }).join("")
   clusterize = new Clusterize({
     scrollElem: document.querySelector(".container"),
@@ -507,9 +776,8 @@ worker.onmessage = function(e) {
   });
   ds.subscribe('callback', async (e) => {
     if (e.items && e.items.length > 0) {
-      document.querySelector("#delete-selected").innerHTML = "<i class='fa-regular fa-trash-can'></i> Delete " + e.items.length + " items"
-      document.querySelector("footer").classList.remove("hidden")
-      selectedEls = e.items
+      // reset tags
+      updateSelection(e.items)
     } else {
       selectedEls = []
       document.querySelector("footer").classList.add("hidden")
@@ -517,12 +785,18 @@ worker.onmessage = function(e) {
   });
 }
 const search = (query) => {
+  console.log("* search", query)
+  document.querySelector("footer").classList.add("hidden")
+  document.querySelector(".loading").classList.remove("hidden")
+  document.querySelector(".container").classList.add("hidden")
   worker.postMessage({ query, sorter })
 }
 const render = () => {
-  document.querySelector(".content").classList.remove("hidden")
+  console.log("#render")
+  document.querySelector(".container").classList.remove("hidden")
   document.querySelector(".settings").classList.add("hidden")
   document.querySelector(".help").classList.add("hidden")
+  document.querySelector(".loading").classList.add("hidden")
 }
 const debouncedSearch = debounce(search)
 const init = async () => {
@@ -532,5 +806,6 @@ const init = async () => {
   }
 }
 init().then(async () => {
+  await persist()
   await synchronize()
 })

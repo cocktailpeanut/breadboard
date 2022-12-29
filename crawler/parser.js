@@ -1,12 +1,25 @@
 const exifr = require('exifr')
+const fs = require('fs')
+const GM = require('./gm')
 class Parser {
+  constructor() {
+    this.gm = new GM()
+  }
   async parse(buf) {
     let parsed = await exifr.parse(buf, true)
     let attrs = {}
     if (parsed.ImageWidth) attrs.width = parsed.ImageWidth
     if (parsed.ImageHeight) attrs.height = parsed.ImageHeight
-    return { ...attrs, ...this.getMeta(parsed) }
+
+    let app
+    if (parsed["sd-metadata"]) {
+      app = "invokeai"
+    } else if (parsed.parameters) {
+      app = "automatic1111"
+    }
+    return { ...attrs, ...this.getMeta(parsed), app }
   }
+
   convert(e, options) {
   /*
   automatic111 {
@@ -56,142 +69,170 @@ class Parser {
     "negative_prompt": "blurry, disfigured"
   }
   */
-    let cfg;
+
+
+
+    const x = {}
+
     if (options && options.cfg) {
-      cfg = options.cfg
+      x["xmp:cfg_scale"] = options.cfg
     } else if (e["CFG scale"]) {
-      cfg = parseFloat(e["CFG scale"])
+      x["xmp:cfg_scale"] = parseFloat(e["CFG scale"])
     } else if (e.cfg_scale) {
-      cfg = parseFloat(e.cfg_scale)
+      x["xmp:cfg_scale"] = parseFloat(e.cfg_scale)
     }
 
-    let seed
     if (options && options.seed) {
-      seed = options.seed
+      x["xmp:seed"] = options.seed
     } else if (e.Seed) {
-      seed = parseInt(e.Seed)
+      x["xmp:seed"] = parseInt(e.Seed)
     } else if (e.seed) {
-      seed = parseInt(e.seed)
+      x["xmp:seed"] = parseInt(e.seed)
     }
 
-    let width;
-    let height;
-    if (options && options.width) {
-      width = options.width
-    } else if (e.width) {
-      width = e.width
-    }
-    if (options && options.height) {
-      height = options.height
-    } else if (e.height) {
-      height = e.height
-    }
-
-    let negative;
     if (options && options.negative) {
-      negative = options.negative
+      x["xmp:negative_prompt"] = options.negative
     } else if (e["Negative prompt"]) {
-      negative = e["Negative prompt"]
+      x["xmp:negative_prompt"] = e["Negative prompt"]
     } else {
       // test for invokeAI negative prompt syntax
-      let matches = [...e.prompt.matchAll(/\[([^\]]+)\]/g)].map((m) => {
-        return m[1]
-      })
-      if (matches.length > 0) {
-        negative = matches.join(", ")
-        e.prompt = e.prompt.replaceAll(/\[([^\]]+)\]/g, "").trim()
-      } else {
-        negative = null
+      if (e.prompt && typeof e.prompt === "string" ) {
+        let matches = [...e.prompt.matchAll(/\[([^\]]+)\]/g)].map((m) => {
+          return m[1]
+        })
+        if (matches.length > 0) {
+          x["xmp:negative_prompt"] = matches.join(", ")
+          x["xmp:prompt"] = e.prompt.replaceAll(/\[([^\]]+)\]/g, "").trim()
+        }
       }
     }
 
-    let sampler
     if (options && options.sampler) {
-      sampler = options.sampler
+      x["xmp:sampler"] = options.sampler
     } else if (e.Sampler) {
-      sampler = e.Sampler
+      x["xmp:sampler"] = e.Sampler
     } else if (e.sampler) {
-      sampler = e.sampler
+      x["xmp:sampler"] = e.sampler
     }
 
-    let steps
     if (options && options.steps) {
-      steps = options.steps
+      x["xmp:steps"] = options.steps
     } else if (e.Steps) {
-      steps = e.Steps
+      x["xmp:steps"] = e.Steps
     } else if (e.steps) {
-      steps = e.steps
-    }
-      
-
-    let p
-    if (e.weight) {
-      p = [{
-        prompt: e.prompt,
-        weight: parseFloat(e.weight)
-      }]
-    } else {
-      p = [{
-        prompt: e.prompt,
-        weight: 1.0
-      }]
+      x["xmp:steps"] = e.steps
     }
 
-    let model
+    if (!x["xmp:prompt"]) {
+      x["xmp:prompt"] = e.prompt
+    }
+
     if (options && options.model) {
-      model = options.model
+      x["xmp:model_name"] = options.model
     } else if (e.model_version) {
-      model = e.model_version
+      x["xmp:model_name"] = e.model_version
     } else if (e.model_weights) {
-      model = e.model_weights
+      x["xmp:model_name"] = e.model_weights
     } else if (e.Model) {
-      model = e.Model
+      x["xmp:model_name"] = e.Model
+    }
+
+    if (options && options.model_url) {
+      x["xmp:model_url"] = options.model_url
+    } else if (e.Model_url) {
+      x["xmp:model_url"] = e.Model_url
+    } else if (e.model_url) {
+      x["xmp:model_url"] = e.model_url
+    }
+
+    if (options && options.agent) {
+      x["xmp:agent"] = options.agent
+    } else if (e.agent) {
+      x["xmp:agent"] = e.agent
+    } else if (e.Agent) {
+      x["xmp:agent"] = e.Agent
+    } else if (e.app) {
+      if (e.app === "invokeai") {
+        if (e.app_id && e.app_version) {
+          x["xmp:agent"] = `${e.app_id} ${e.app_version}`
+        }
+      } else if (e.app === "automatic1111") {
+        x["xmp:agent"] = "automatic1111"
+      }
     }
 
 
-
-  //"model_weights": "stable-diffusion-1.5",
-    return {
-      model,
-//      model_hash: e.model_hash,
-      app_id: e.app_id,
-      app_version: e.app_version,
-      image: {
-        prompt: p,
-        sampler,
-        steps: steps,
-        cfg_scale: cfg,
-        height: height,
-        width: width,
-        seed,
-        negative_prompt: negative
-      },
+    if (options && options.subject) {
+      x["dc:subject"] = options.subject
+    } else if (e.subject) {
+      x["dc:subject"] = e.subject
+    } else if (e.Subject) {
+      x["dc:subject"] = e.Subject
     }
+
+    let keys = [
+      "xmp:prompt",
+      "xmp:sampler",
+      "xmp:steps",
+      "xmp:cfg_scale",
+      "xmp:seed",
+      "xmp:negative_prompt",
+      "xmp:model_name",
+      "xmp:model_url",
+      "xmp:agent",
+      "dc:subject"
+    ]
+    
+    let list = []
+    for(let key of keys) {
+      if (x[key]) {
+        list.push({ key, val: x[key] })
+      } else {
+        list.push({ key })
+      }
+    }
+
+    return list
+
   }
-  flatten (app, converted, filepath, ctime, mtime) {
-    return {
-      //app: S.escape(app),
-      app,
-      //model: (model ? S.escape(model) : 'NULL'),
-      model: converted.model,
-      //sampler: (converted.image.sampler ? S.escape(converted.image.sampler) : 'NULL'),
-      sampler: converted.image.sampler,
-      //prompt: (converted.image.prompt[0].prompt ? S.escape(converted.image.prompt[0].prompt) : 'NULL'),
-      prompt: converted.image.prompt[0].prompt,
-      //weight: (converted.image.prompt[0].weight ? converted.image.prompt[0].weight : 'NULL'),
-      weight: converted.image.prompt[0].weight,
-      steps: converted.image.steps,
-      cfg_scale: converted.image.cfg_scale,
-      height: (converted.image.height ? converted.image.height : 'NULL'),
-      width: (converted.image.width ? converted.image.width : 'NULL'),
-      seed: converted.image.seed,
-      //negative_prompt: S.escape(converted.image.negative_prompt),
-      negative_prompt: converted.image.negative_prompt,
-      mtime,
-      ctime,
-      //filename: S.escape(filepath)
-      filename: filepath
+//  flatten (app, converted, filepath, btime, mtime) {
+//    return {
+//      app,
+//      model: converted.model,
+//      sampler: converted.image.sampler,
+//      prompt: converted.image.prompt[0].prompt,
+//      weight: converted.image.prompt[0].weight,
+//      steps: converted.image.steps,
+//      cfg_scale: converted.image.cfg_scale,
+//      height: (converted.image.height ? converted.image.height : 'NULL'),
+//      width: (converted.image.width ? converted.image.width : 'NULL'),
+//      seed: converted.image.seed,
+//      negative_prompt: converted.image.negative_prompt,
+//      mtime,
+//      btime,
+//      path: filepath
+//    }
+//  }
+  async serialize(root_path, file_path) {
+    let info = await this.gm.get(file_path)
+    let o = {}
+    for(let item of info.parsed) {
+      if (typeof item.val !== "undefined") {
+        if (item.key.startsWith("xmp:")) {
+          let key = item.key.replace("xmp:", "").toLowerCase()
+          o[key] = item.val
+        } else if (item.key.startsWith("dc:")) {
+          let key = item.key.replace("dc:", "").toLowerCase()
+          o[key] = item.val
+        } else {
+          o[item.key] = item.val
+        }
+      }
     }
+    let stat = await fs.promises.stat(file_path)
+    let btime = new Date(stat.birthtime).getTime()
+    let mtime = new Date(stat.mtime).getTime()
+    return { ...o, root_path, file_path, mtime, btime }
   }
   getPrompt(parsed) {
     if (parsed.Dream) {

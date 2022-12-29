@@ -39,6 +39,7 @@ exif {
 
 */
 
+const GM = require('./gm')
 const path = require('path');
 const { fdir } = require("fdir");
 const os = require('os');
@@ -49,12 +50,27 @@ const parser = new Parser()
 class Diffusionbee {
   constructor(folderpath) {
     this.folderpath = folderpath
+    this.gm = new GM()
   }
   async init() {
     let str = await fs.promises.readFile(path.resolve(path.dirname(this.folderpath), "data.json"), "utf8")
     let data = JSON.parse(str)
     let history = data.history
-
+    /****************************************************
+    *
+    *   mapping := {
+    *     [filename]: {
+    *       prompt,
+    *       seed,
+    *       key,
+    *       img_w,
+    *       img_h,
+    *       dif_steps,
+    *       guidence_scale
+    *     }
+    *   }
+    *
+    ****************************************************/
     this.mapping = {}
     this.batchIndex = {}
     for(let key in history) {
@@ -72,108 +88,64 @@ class Diffusionbee {
         this.batchIndex[img] = i
       }
     }
-
-    /*
-    mapping := {
-      [filename]: {
-        prompt,
-        seed,
-        key,
-        img_w,
-        img_h,
-        dif_steps,
-        guidence_scale
-      }
-    }
-    */
   }
-  async sync(checkpoint, cb) {
-    let files
+  async sync(filename, force) {
+    /******************************************************************************
+    *   info := {
+    *     parsed: [
+    *       { key: 'xmp:prompt', val: 'Steve Buscemi, itojunji style' },
+    *       { key: 'xmp:sampler' },
+    *       { key: 'xmp:steps', val: 25 },
+    *       { key: 'xmp:cfg_scale' },
+    *       { key: 'xmp:seed' },
+    *       { key: 'xmp:negative_prompt', val: 'disfigured' },
+    *       { key: 'xmp:model_name' },
+    *       { key: 'xmp:model_url' },
+    *       { key: 'xmp:agent' },
+    *       { key: 'dc:subject' }
+    *     ]
+    *   }
+    ******************************************************************************/
+    let info = await this.gm.get(filename)
     try {
-      //files = await fs.promises.readdir(this.folderpath)
-      files = await new fdir()
-        .glob("**/*.png")
-        .withBasePath()
-        .crawl(this.folderpath)
-        .withPromise()
-    } catch (e) {
-      await cb({
-        app: this.folderpath,
-        total: 1,
-        progress: 1,
-      })
-      return
-    }
-
-    let counter = 0;
-    let keysLength = files.length;
-    for(let file of files) {
-      let filename = path.resolve(this.folderpath, file)
-      let stat = await fs.promises.stat(filename)
-      try {
-
-        if (stat.isFile()) {
-          let ctime = new Date(stat.ctime).getTime()
-          let mtime = new Date(stat.mtime).getTime()
-          if (ctime >= checkpoint) {
-            console.log("above checkpoint", ctime, checkpoint, filename)
-
-            let buf = await fs.promises.readFile(filename)
-            let parsed = await parser.parse(buf)
-            //parsed = false  // for testing freshly every time
-            if (parsed && parsed.prompt) {
-              let converted = parser.convert(parsed)
-              let flattened = parser.flatten(this.folderpath, converted, filename, ctime, mtime)
-              await cb({
-                app: this.folderpath,
-                total: keysLength,
-                progress: counter,
-                meta: flattened
-              })
-            } else {
-              // Write
-              let m = this.mapping[filename]
-              let seed = parseInt(m.seed) + 1234 * this.batchIndex[filename]
-              let converted = parser.convert(m, {
-                sampler: "PLMS",
-                steps: (m.dif_steps ? parseInt(m.dif_steps) : null),
-                cfg: (m["guidence_scale"] ? parseFloat(m["guidence_scale"]) : null),
-                width: parseInt(m.img_w),
-                height: parseInt(m.img_h),
-                seed,
-              })
-              // Send to frontend
-              const bin = buf.toString('binary');
-
-
-              let list = meta.splitChunk(bin);
-              let chunk = meta.createChunk("tEXt", "sd-metadata" + String.fromCharCode(0x00) + JSON.stringify(converted))
-
-              list.splice(1, 0, chunk)
-
-              let newBin = meta.joinChunk(list);
-
-              await fs.promises.writeFile(filename, newBin, "binary")
-
-              // need to get a new mtime because they get updated when metadata is attached
-              let stat = await fs.promises.stat(filename)
-              let ctime = new Date(stat.ctime).getTime()
-              let mtime = new Date(stat.mtime).getTime()
-              let flattened = parser.flatten(this.folderpath, converted, filename, ctime, mtime)
-
-              await cb({
-                app: this.folderpath,
-                total: keysLength,
-                progress: counter,
-                meta: flattened
-              })
-            }
-          }
-        }
-      } catch (e) {
-        console.log("# Error", e)
+      // gm doesn't exist => write to files first
+      if (!info.parsed || force) {
+        let m = this.mapping[filename]
+        let seed = parseInt(m.seed) + 1234 * this.batchIndex[filename]
+        let list = [{
+          key: 'xmp:prompt',
+          val: m.prompt,
+        }, {
+          key: 'xmp:sampler',
+          val: "plms",
+        }, {
+          key: 'xmp:steps',
+          val: (m.dif_steps ? parseInt(m.dif_steps) : null),
+        }, {
+          key: 'xmp:cfg_scale',
+          val: (m["guidence_scale"] ? parseFloat(m["guidence_scale"]) : null),
+        }, {
+          key: 'xmp:seed',
+          val: seed,
+        }, {
+          key: 'xmp:negative_prompt',
+          val: m.negative_prompt,
+        }, {
+          key: 'xmp:model_name',
+          val: m.model_version,
+        }, {
+          key: 'xmp:model_url',
+          val: null,  // reserved
+        }, {
+          keyi: 'xmp:agent',
+          val: "diffusionbee"
+        }]
+        await this.gm.set(filename, list)
       }
-      counter++;
+      let serialized = await parser.serialize(this.folderpath, filename)
+      return serialized
+    } catch (e) {
+      console.log("E", e)
     }
   }
 };

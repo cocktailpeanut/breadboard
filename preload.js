@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron')
 contextBridge.exposeInMainWorld('electronAPI',{
-  sync: (app, checkpoint) => {
-    return ipcRenderer.invoke('sync', app, checkpoint)
+  sync: (rpc) => {
+    return ipcRenderer.invoke('sync', rpc)
   },
   del: (filenames) => {
     if (Array.isArray(filenames)) {
@@ -22,5 +22,11 @@ contextBridge.exposeInMainWorld('electronAPI',{
   },
   defaults: () => {
     return ipcRenderer.invoke("defaults")
+  },
+  gm: (rpc) => {
+    return ipcRenderer.invoke("gm", rpc)
+  },
+  open: (file_path) => {
+    return ipcRenderer.invoke("open", file_path)
   }
 })

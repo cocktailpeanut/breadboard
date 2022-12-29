@@ -66,6 +66,7 @@
     "electron-context-menu": "^3.6.1",
     "exifr": "^7.1.3",
     "express": "^4.18.2",
+    "fast-xml-parser": "^4.0.12",
     "fastq": "^1.14.0",
     "fdir": "^5.3.0",
     "getport": "^0.1.0",

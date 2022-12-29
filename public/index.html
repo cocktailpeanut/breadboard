@@ -7,17 +7,22 @@
     <link href="/css/solid.min.css" rel="stylesheet">
     <link href="/css/brands.min.css" rel="stylesheet">
     <link href="./clusterize.css" rel="stylesheet" />
+    <link href="./tagger.css" rel="stylesheet" />
     <style>
       html {
         height: 100%;
         width: 100%;
       }
       body {
+        height: 100%;
         background: rgba(0,0,100,0.05);
         font-family: Sans-serif;
         margin: 0;
         display: flex;
         flex-direction: column;
+      }
+      .flex {
+        display: flex !important;
       }
       body::-webkit-scrollbar {
         width: 15px;
@@ -31,11 +36,14 @@
       }
       .container {
         flex-grow: 1;
+        outline: none;
+        padding-bottom: 100px;
       }
       .content {
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
+        outline: none;
       }
       .content:empty {
         height: 1000px;
@@ -184,7 +192,7 @@
         display: none;
       }
       .card .btn.delete {
-        background: firebrick;
+        background: black;
         color: white;
         padding: 5px 10px;
         border-radius: 4px;
@@ -205,16 +213,17 @@
         border-top-right-radius: 4px; 
         border-bottom-right-radius: 4px; 
       }
-      .card td.copy-td {
+      .card td.copy-td, .card td.edit-td {
         width: 50px !important;
         text-align: right;
       }
-      .card tr:hover button.copy-text {
+      .card tr:hover button.copy-text, .card tr:hover button.edit-tags, .card tr:hover button.open-file {
         visibility: visible;
       }
-      tr button.copy-text {
+      tr button.copy-text, tr button.edit-tags, tr button.open-file {
         visibility: hidden;
         border-radius: 4px; 
+        margin: 2px;
         padding: 2px 5px;
         border: 1px solid rgba(0,0,0,0.1);
         cursor: pointer;
@@ -225,10 +234,10 @@
         position: sticky;
         top: 0;
         display: flex;
-        /*
         background: white;
-        */
+        /*
         background: black;
+        */
         align-items: center;
         /*
         padding: 30px 10px 5px;
@@ -240,11 +249,15 @@
       nav select {
         padding: 10px 0;
         outline: none;
+        /*
         background: black;
-        border: none;
         color: white;
+        */
+        color: black;
+
+        border: none;
       }
-      nav > *, footer > * {
+      nav > * {
         margin: 10px;
         display: block;
       }
@@ -261,12 +274,12 @@
         color: white;
         */
         font-weight: bold;
-        /*
         background: white;
         color: black;
-        */
+        /*
         background: none;
         color: white;
+        */
         border: none;
         width: 30px;
         height: 30px;
@@ -284,10 +297,10 @@
         padding: 10px;
         box-sizing: border-box;
         border: none;
-        /*
         background: rgba(0,0,100,0.05);
-        */
+        /*
         background: white;
+        */
         outline: none;
       }
       .flexible {
@@ -362,7 +375,7 @@
         display: flex;
         align-items: center;
       }
-      .settings main .header button, footer button, .help main .header button {
+      .settings main .header button, .help main .header button {
         border: none;
         background: black;
         border-radius: 2px;
@@ -378,33 +391,90 @@
         cursor: pointer;
       }
 
-
-
+      footer button {
+        border: none;
+        background: yellowgreen;
+        border-radius: 5px;
+        color: white;
+        cursor: pointer;
+        padding: 2px 10px;
+        font-weight: bold;
+      }
+      footer button#save-tags {
+        border-top-right-radius: 5px;
+        border-bottom-right-radius: 5px;
+        border-top-left-radius: 0px;
+        border-bottom-left-radius: 0px;
+      }
       .ds-selected {
         outline: 3px solid black;
         outline-offset: 3px;
       }
       footer {
-        position: -webkit-sticky;
-        position: sticky;
+        position: fixed;
         bottom: 0;
+        left: 0;
+        right: 0;
         display: flex;
         background: white;
+        border-top: 1px solid rgba(0,0,0,0.1);
         box-sizing: border-box;
         z-index: 10000000000;
+        padding: 0 10px;
+      }
+      footer > * {
+        margin: 10px 0;
+        display: block;
       }
       footer.empty button {
         visibility: hidden;
       }
       footer button {
-        background: firebrick;
+        background: black;
       }
       footer button.disabled {
         background: gray;
         color: white;
       }
+      footer .tagger {
+        width: 300px;
+        background: rgba(0,0,100,0.1);
+        border: none;
+        border-top-right-radius: 0px;
+        border-bottom-right-radius: 0px;
+        border-top-left-radius: 5px;
+        border-bottom-left-radius: 5px;
+      }
       .hidden {
         display: none!important;
+      }
+      .tag-item {
+        border: none;
+        background: royalblue;
+        color: white;
+        padding: 2px 8px;
+        border-radius: 4px;
+        margin-right: 5px;
+        cursor: pointer;
+      }
+      .loading {
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 12px;
+        text-align: center;
+        color: gray;
+      }
+      .loading i {
+        font-size: 20px;
+        margin: 5px;
+      }
+      tr .del-item {
+        display: none;
+      }
+      tr.tags.edit-mode .del-item {
+        display: inline-block;
       }
     </style>
   </head>
@@ -426,12 +496,24 @@
     <div class='container'>
       <div class='content'></div>
     </div>
+    <div class='loading hidden'>
+      <div>
+        <i class="fa-solid fa-circle-notch fa-spin"></i><br>
+        <div>loading</div>
+      </div>
+    </div>
     <div class='settings'></div>
     <div class='help'></div>
     <footer class='hidden'>
+      <input type='text' name='tags' id='tag-field' placeholder='add tags to the selection'/>
+      <button id='save-tags'><i class="fa-solid fa-tags"></i> Tag</button>
       <div class='flexible'></div>
       <button id='delete-selected'>Delete</button>
     </footer>
+    <script src='./popper.js'></script>
+    <script src='./tippy.js'></script>
+    <script src='./hotkeys.js'></script>
+    <script src='./tagger.js'></script>
     <script src="./nanobar.js"></script>
     <script src="./clusterize.js"></script>
     <script src="./ds.js"></script>

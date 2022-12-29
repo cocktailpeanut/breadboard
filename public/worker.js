@@ -1,24 +1,25 @@
 importScripts("./dexie.js")
 var db = new Dexie("breadboard")
 db.version(1).stores({
-  files: "filename, model, app, prompt, ctime, *tokens",
+  //files: "path, model, app, prompt, ctime, *tokens",
+  files: "file_path, model_name, root_path, prompt, btime, *tokens",
   folders: "&name",
-  checkpoints: "&app, ctime"
+  checkpoints: "&root_path, btime"
 })
 function applyFilter(q, filters) {
   if (filters.length > 0) {
     for(let filter of filters) {
       if (filter.before) {
-        q = q.and("ctime").belowOrEqual(new Date(filter.before).getTime())
+        q = q.and("btime").belowOrEqual(new Date(filter.before).getTime())
       } else if (filter.after) {
-        q = q.and("ctime").aboveOrEqual(new Date(filter.after).getTime())
-      } else if (filter.model) {
+        q = q.and("btime").aboveOrEqual(new Date(filter.after).getTime())
+      } else if (filter.model_name) {
         q = q.and((item) => {
-          return new RegExp(filter.model, "i").test(item.model)
+          return new RegExp(filter.model_name, "i").test(item.model_name)
         })
-      } else if (filter.filename) {
+      } else if (filter.path) {
         q = q.and((item) => {
-          return new RegExp(filter.filename, "i").test(item.filename)
+          return new RegExp(filter.path, "i").test(item.path)
         })
       }
     }
@@ -39,13 +40,13 @@ function find (phrase) {
       filters.push({
         after: prefix.replace("after:", "").trim()
       })
-    } else if (prefix.startsWith("model:")) {
+    } else if (prefix.startsWith("model_name:")) {
       filters.push({
-        model: prefix.replace("model:", "").trim()
+        model_name: prefix.replace("model_name:", "").trim()
       })
-    } else if (prefix.startsWith("filename:")) {
+    } else if (prefix.startsWith("path:")) {
       filters.push({
-        filename: prefix.replace("filename:", "").trim()
+        path: prefix.replace("path:", "").trim()
       })
     } else {
       tokens.push(prefix)
@@ -59,14 +60,13 @@ function find (phrase) {
     let promises
     if (tokens.length > 0) {
       promises = tokens.map((token) => {
-        let q = db.files.where('tokens').startsWithIgnoreCase(token)//.primaryKeys()
+        let q = db.files.where('tokens').startsWithIgnoreCase(token)
         return applyFilter(q, filters)
       })
     } else {
       let q = db.files.toCollection()
       promises = [applyFilter(q, filters)]
     }
-    //const results = yield Dexie.Promise.all (tokens.map(prefix => db.files.where('tokens').startsWithIgnoreCase(prefix).primaryKeys()));
     const results = yield Dexie.Promise.all(promises)
     console.log("results", results)
     const reduced = results.reduce ((a, b) => {
@@ -105,5 +105,6 @@ addEventListener("message", async event => {
       res = await db.files.orderBy(sorter.column).reverse().toArray()
     }
   }
+  console.log("postMessage", res)
   postMessage(res)
 });
