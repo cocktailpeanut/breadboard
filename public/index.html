@@ -410,7 +410,7 @@
         outline: 3px solid black;
         outline-offset: 3px;
       }
-      footer {
+      footer > div {
         position: fixed;
         bottom: 0;
         left: 0;
@@ -504,11 +504,17 @@
     </div>
     <div class='settings'></div>
     <div class='help'></div>
-    <footer class='hidden'>
-      <input type='text' name='tags' id='tag-field' placeholder='add tags to the selection'/>
-      <button id='save-tags'><i class="fa-solid fa-tags"></i> Tag</button>
-      <div class='flexible'></div>
-      <button id='delete-selected'>Delete</button>
+    <footer>
+      <div class='edit-mode hidden'>
+        <input type='text' name='tags' id='tag-field' placeholder='add tags to the selection'/>
+        <button id='save-tags'><i class="fa-solid fa-tags"></i> Tag</button>
+        <div class='flexible'></div>
+        <button id='delete-selected'>Delete</button>
+        <button id='view-mode'>Done</button>
+      </div>
+      <div class='view-mode'>
+        <button id='edit-mode'>Edit</button>
+      </div>
     </footer>
     <script src='./popper.js'></script>
     <script src='./tippy.js'></script>

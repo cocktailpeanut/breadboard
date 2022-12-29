@@ -78,10 +78,18 @@ const deleteSelection = async () => {
       el.remove()
     }, 1000)
   }
-  document.querySelector("footer").classList.add("hidden")
+//  document.querySelector("footer").classList.add("hidden")
   selectedEls = []
   ds.clearSelection()
 }
+document.querySelector("#edit-mode").addEventListener("click", async (e) => {
+  document.querySelector("footer .edit-mode").classList.remove("hidden")
+  document.querySelector("footer .view-mode").classList.add("hidden")
+})
+document.querySelector("#view-mode").addEventListener("click", async (e) => {
+  document.querySelector("footer .edit-mode").classList.add("hidden")
+  document.querySelector("footer .view-mode").classList.remove("hidden")
+})
 document.querySelector("#save-tags").addEventListener("click", async (e) => {
 
   let tags = tagInput.value.split(",")
@@ -110,7 +118,7 @@ document.querySelector("#save-tags").addEventListener("click", async (e) => {
     }
   })
   await synchronize(paths, async () => {
-    document.querySelector("footer").classList.add("hidden")
+//    document.querySelector("footer").classList.add("hidden")
     selectedEls = []
     document.querySelector(".status").innerHTML = ""
     let query = items.join(" ")
@@ -742,11 +750,11 @@ const updateSelection = (items) => {
   }
   document.querySelector("#delete-selected").innerHTML = "<i class='fa-regular fa-trash-can'></i> Delete " + items.length + " items"
   selectedEls = items
-  if (items.length > 0) {
-    document.querySelector("footer").classList.remove("hidden")
-  } else {
-    document.querySelector("footer").classList.add("hidden")
-  }
+//  if (items.length > 0) {
+//    document.querySelector("footer .edit-mode").classList.remove("hidden")
+//  } else {
+//    document.querySelector("footer .edit-mode").classList.add("hidden")
+//  }
 }
 worker.onmessage = function(e) {
   let res = e.data
@@ -780,13 +788,13 @@ worker.onmessage = function(e) {
       updateSelection(e.items)
     } else {
       selectedEls = []
-      document.querySelector("footer").classList.add("hidden")
+//      document.querySelector("footer .edit-mode").classList.add("hidden")
     }
   });
 }
 const search = (query) => {
   console.log("* search", query)
-  document.querySelector("footer").classList.add("hidden")
+//  document.querySelector("footer").classList.add("hidden")
   document.querySelector(".loading").classList.remove("hidden")
   document.querySelector(".container").classList.add("hidden")
   worker.postMessage({ query, sorter })
