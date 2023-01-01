@@ -179,20 +179,26 @@ class GM {
         "xmp:agent",
       ]
       let res = []
-      for(let key of keys) {
-        if (gms[key]) {
-          res.push({ key, val: gms[key] })
-        } else {
-          res.push({ key, })
+      if (gms) {
+        for(let key of keys) {
+          if (gms[key]) {
+            res.push({ key, val: gms[key] })
+          } else {
+            res.push({ key, })
+          }
         }
       }
       if (subject) {
         let val = subject["rdf:Bag"]["rdf:li"]
-        val = (Array.isArray(val) ? val : [val])
-        res.push({
-          key: "dc:subject",
-          val
-        })
+        if (val) {
+          val = (Array.isArray(val) ? val : [val])
+          res.push({
+            key: "dc:subject",
+            val
+          })
+        } else {
+          res.push({ key: "dc:subject" })
+        }
       } else {
         res.push({ key: "dc:subject" })
       }
@@ -234,6 +240,16 @@ class GM {
             let set = new Set(old_item.val)
             for(let item of new_item.val) {
               set.add(item)
+            }
+            updated_items.push({
+              key: new_item.key,
+              val: Array.from(set)
+            })
+          } else if (new_item.mode && new_item.mode === "delete") {
+            // remove the item from the old value
+            let set = new Set(old_item.val)
+            for(let item of new_item.val) {
+              set.delete(item)
             }
             updated_items.push({
               key: new_item.key,

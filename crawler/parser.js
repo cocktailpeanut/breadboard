@@ -223,12 +223,15 @@ class Parser {
           o[key] = item.val
         } else if (item.key.startsWith("dc:")) {
           let key = item.key.replace("dc:", "").toLowerCase()
-          o[key] = item.val
+          if (Array.isArray(item.val) && item.val.length > 0) {
+            o[key] = item.val
+          }
         } else {
           o[item.key] = item.val
         }
       }
     }
+    console.log("serialize", o)
     let stat = await fs.promises.stat(file_path)
     let btime = new Date(stat.birthtime).getTime()
     let mtime = new Date(stat.mtime).getTime()

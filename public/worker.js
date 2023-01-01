@@ -2,9 +2,11 @@ importScripts("./dexie.js")
 var db = new Dexie("breadboard")
 db.version(1).stores({
   //files: "path, model, app, prompt, ctime, *tokens",
-  files: "file_path, model_name, root_path, prompt, btime, *tokens",
+  files: "file_path, agent, model_name, root_path, prompt, btime, *tokens",
   folders: "&name",
-  checkpoints: "&root_path, btime"
+  checkpoints: "&root_path, btime",
+  settings: "key, val",
+  favorites: "query"
 })
 function applyFilter(q, filters) {
   if (filters.length > 0) {
@@ -17,9 +19,14 @@ function applyFilter(q, filters) {
         q = q.and((item) => {
           return new RegExp(filter.model_name, "i").test(item.model_name)
         })
-      } else if (filter.path) {
+      } else if (filter.agent) {
+        //q = q.and("agent").startsWithIgnoreCase(filter.agent)
         q = q.and((item) => {
-          return new RegExp(filter.path, "i").test(item.path)
+          return item.agent && item.agent.toLowerCase().startsWith(filter.agent.toLowerCase())
+        })
+      } else if (filter.file_path) {
+        q = q.and((item) => {
+          return new RegExp(filter.file_path, "i").test(item.file_path)
         })
       }
     }
@@ -44,18 +51,21 @@ function find (phrase) {
       filters.push({
         model_name: prefix.replace("model_name:", "").trim()
       })
-    } else if (prefix.startsWith("path:")) {
+    } else if (prefix.startsWith("agent:")) {
       filters.push({
-        path: prefix.replace("path:", "").trim()
+        agent: prefix.replace("agent:", "").trim()
+      })
+    } else if (prefix.startsWith("file_path:")) {
+      filters.push({
+        file_path: prefix.replace("file_path:", "").trim()
       })
     } else {
       tokens.push(prefix)
     }
   }
-
-
-  console.log("tokens", tokens)
   console.log("filters", filters)
+
+
   return db.transaction('r', db.files, function*() {
     let promises
     if (tokens.length > 0) {
@@ -68,7 +78,6 @@ function find (phrase) {
       promises = [applyFilter(q, filters)]
     }
     const results = yield Dexie.Promise.all(promises)
-    console.log("results", results)
     const reduced = results.reduce ((a, b) => {
       const set = new Set(b);
       return a.filter(k => set.has(k));
@@ -105,6 +114,5 @@ addEventListener("message", async event => {
       res = await db.files.orderBy(sorter.column).reverse().toArray()
     }
   }
-  console.log("postMessage", res)
   postMessage(res)
 });

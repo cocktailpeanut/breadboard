@@ -2,6 +2,7 @@ const {app, shell, BrowserWindow, ipcMain, dialog, session, clipboard } = requir
 const { fdir } = require("fdir");
 const contextMenu = require('electron-context-menu');
 const path = require('path')
+const xmlFormatter = require('xml-formatter');
 const fs = require('fs')
 const os = require('os')
 const express = require('express')
@@ -9,18 +10,27 @@ const fastq = require('fastq')
 const getport = require('getport')
 const Diffusionbee = require('./crawler/diffusionbee')
 const Standard = require('./crawler/standard')
+const Updater = require('./updater/index')
 const GM = require('./crawler/gm')
 const gm = new GM()
+const is_mac = process.platform.startsWith("darwin")
 contextMenu({ showSaveImageAs: true });
 var mainWindow;
+const updater = new Updater()
 function createWindow (port) {
   mainWindow = new BrowserWindow({
-//    titleBarStyle: 'hidden',
+		titleBarStyle : (is_mac ? "hidden" : "default"),
+		titleBarOverlay : !is_mac,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
     },
   })
   mainWindow.loadURL(`http://localhost:${port}`)
+  mainWindow.maximize();
+
+//  mainWindow.webContents.openDevTools()
+
+
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https:')) {
       shell.openExternal(url);
@@ -28,8 +38,32 @@ function createWindow (port) {
     return { action: 'deny' };
   });
 }
+const VERSION = app.getVersion()
+console.log("VERSION", VERSION)
+
+const releaseFeed = "https://github.com/cocktailpeanut/breadboard/releases.atom"
+const releaseURL = "https://github.com/cocktailpeanut/breadboard/releases"
+const updateCheck = async () => {
+  let res = await updater.check(releaseFeed)
+  console.log("Feed", res)
+  if (res.feed && res.feed.entry) {
+
+    let latest = (Array.isArray(res.feed.entry) ? res.feed.entry[0] : res.feed.entry)
+    if (latest.title === VERSION) {
+      console.log("UP TO DATE", latest.title, VERSION)
+    } else {
+      console.log("Need to update to", latest)
+      mainWindow.webContents.send('msg', {
+        $type: "update",
+        $url: releaseURL,
+        latest
+      })
+    }
+  }
+}
 app.whenReady().then(async () => {
-  session.defaultSession.clearStorageData()   // for testing freshly every time
+
+//  session.defaultSession.clearStorageData()   // for testing freshly every time
   const port = await new Promise((resolve, reject) => {
     getport(function (e, p) {
       if (e) throw e
@@ -39,6 +73,15 @@ app.whenReady().then(async () => {
 
   const server = express()
   server.use(express.static(path.resolve(__dirname, 'public')))
+  server.use("/docs", express.static(path.resolve(__dirname, 'docs')))
+  server.set('view engine', 'ejs');
+  server.set('views', path.resolve(__dirname, "views"))
+  server.get("/", (req, res) => {
+    res.render("index", {
+      platform: process.platform,
+      version: VERSION
+    })
+  })
   server.get('/file', (req, res) => {
     res.sendFile(req.query.file)
   })
@@ -57,18 +100,22 @@ app.whenReady().then(async () => {
       for(let i=0; i<rpc.paths.length; i++) {
         let { file_path, root_path } = rpc.paths[i]
         let res;
-        if (/diffusionbee/g.test(root_path)) {
-          if (!diffusionbee) {
-            diffusionbee = new Diffusionbee(root_path)
-            await diffusionbee.init()
+        try {
+          if (/diffusionbee/g.test(root_path)) {
+            if (!diffusionbee) {
+              diffusionbee = new Diffusionbee(root_path)
+              await diffusionbee.init()
+            }
+            res = await diffusionbee.sync(file_path, rpc.force)
+          } else {
+            if (!standard) {
+              standard = new Standard(root_path)
+              await standard.init()
+            }
+            res = await standard.sync(file_path, rpc.force)
           }
-          res = await diffusionbee.sync(file_path, rpc.force)
-        } else {
-          if (!standard) {
-            standard = new Standard(root_path)
-            await standard.init()
-          }
-          res = await standard.sync(file_path, rpc.force)
+        } catch (e) {
+          console.log("E", e)
         }
         if (res) {
           await queue.push({
@@ -92,34 +139,42 @@ app.whenReady().then(async () => {
         .crawl(rpc.root_path)
         .withPromise()
 
-      let crawler;
-      if (/diffusionbee/g.test(rpc.root_path)) {
-        crawler = new Diffusionbee(rpc.root_path)
-      } else {
-        crawler = new Standard(rpc.root_path)
-      }
-      await crawler.init()
-      for(let i=0; i<filenames.length; i++) {
-        let filename = filenames[i]
-        let stat = await fs.promises.stat(filename)
-        let btime = new Date(stat.birthtime).getTime()
-        if (btime > rpc.checkpoint) {
-          console.log("above checkpoint", btime, rpc.checkpoint, filename)
-          let res = await crawler.sync(filename, rpc.force)
-          if (res) {
-            await queue.push({
-              app: rpc.root_path,
-              total: filenames.length,
-              progress: i,
-              meta: res
-            })
-            continue;
-          }
+      if (filenames.length > 0) {
+        let crawler;
+        if (/diffusionbee/g.test(rpc.root_path)) {
+          crawler = new Diffusionbee(rpc.root_path)
+        } else {
+          crawler = new Standard(rpc.root_path)
         }
+        await crawler.init()
+        for(let i=0; i<filenames.length; i++) {
+          let filename = filenames[i]
+          let stat = await fs.promises.stat(filename)
+          let btime = new Date(stat.birthtime).getTime()
+          if (btime > rpc.checkpoint) {
+//            console.log("above checkpoint", btime, rpc.checkpoint, filename)
+            let res = await crawler.sync(filename, rpc.force)
+            if (res) {
+              await queue.push({
+                app: rpc.root_path,
+                total: filenames.length,
+                progress: i,
+                meta: res
+              })
+              continue;
+            }
+          }
+          await queue.push({
+            app: rpc.root_path,
+            total: filenames.length,
+            progress: i,
+          })
+        }
+      } else {
         await queue.push({
           app: rpc.root_path,
-          total: filenames.length,
-          progress: i,
+          total: 1,
+          progress: 1,
         })
       }
     }
@@ -148,29 +203,40 @@ app.whenReady().then(async () => {
     let home = os.homedir()
     return [
       path.resolve(home, "invokeai", "outputs"),
-//      path.resolve(home, ".diffusionbee", "images"),
+      path.resolve(home, ".diffusionbee", "images"),
     ]
   })
   ipcMain.handle('copy', (event, text) => {
     clipboard.writeText(text)
   })
   ipcMain.handle('gm', async (event, rpc) => {
-    console.log("rpc",rpc)
     if (rpc.cmd === "set" || rpc.cmd === "rm") {
       let res = await gm[rpc.cmd](...rpc.args)
       return res
     } 
   })
   ipcMain.handle('open', async (event, file_path) => {
-    console.log("OPEN", file_path)
     await shell.showItemInFolder(file_path)
+  })
+  ipcMain.handle('xmp', async (event, file_path) => {
+    let res = await gm.get(file_path)
+    return xmlFormatter(res.chunk.data.replace("XML:com.adobe.xmp\x00\x00\x00\x00\x00", ""), {
+      indentation: "  "
+    })
+  })
+  ipcMain.handle('docs', async (event, file_path) => {
+    let modal = new BrowserWindow({
+      parent: mainWindow,
+//      modal: true
+    })
+    modal.loadURL(`http://localhost:${port}/docs/doc.html`)
   })
 
   createWindow(port)
+  updateCheck()
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow(port)
   })
-//  mainWindow.webContents.openDevTools()
 
 })
 

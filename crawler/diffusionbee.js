@@ -111,41 +111,43 @@ class Diffusionbee {
       // gm doesn't exist => write to files first
       if (!info.parsed || force) {
         let m = this.mapping[filename]
-        let seed = parseInt(m.seed) + 1234 * this.batchIndex[filename]
-        let list = [{
-          key: 'xmp:prompt',
-          val: m.prompt,
-        }, {
-          key: 'xmp:sampler',
-          val: "plms",
-        }, {
-          key: 'xmp:steps',
-          val: (m.dif_steps ? parseInt(m.dif_steps) : null),
-        }, {
-          key: 'xmp:cfg_scale',
-          val: (m["guidence_scale"] ? parseFloat(m["guidence_scale"]) : null),
-        }, {
-          key: 'xmp:seed',
-          val: seed,
-        }, {
-          key: 'xmp:negative_prompt',
-          val: m.negative_prompt,
-        }, {
-          key: 'xmp:model_name',
-          val: m.model_version,
-        }, {
-          key: 'xmp:model_url',
-          val: null,  // reserved
-        }, {
-          keyi: 'xmp:agent',
-          val: "diffusionbee"
-        }]
-        await this.gm.set(filename, list)
+        if (m) {
+          let seed = parseInt(m.seed) + 1234 * this.batchIndex[filename]
+          let list = [{
+            key: 'xmp:prompt',
+            val: m.prompt,
+          }, {
+            key: 'xmp:sampler',
+            val: "plms",
+          }, {
+            key: 'xmp:steps',
+            val: (m.dif_steps ? parseInt(m.dif_steps) : null),
+          }, {
+            key: 'xmp:cfg_scale',
+            val: (m["guidence_scale"] ? parseFloat(m["guidence_scale"]) : null),
+          }, {
+            key: 'xmp:seed',
+            val: seed,
+          }, {
+            key: 'xmp:negative_prompt',
+            val: m.negative_prompt,
+          }, {
+            key: 'xmp:model_name',
+            val: m.model_version,
+          }, {
+            key: 'xmp:model_url',
+            val: null,  // reserved
+          }, {
+            key: 'xmp:agent',
+            val: "diffusionbee"
+          }]
+          await this.gm.set(filename, list)
+        }
       }
       let serialized = await parser.serialize(this.folderpath, filename)
       return serialized
     } catch (e) {
-      console.log("E", e)
+      console.log("E", e, filename, this.mapping[filename])
     }
   }
 };

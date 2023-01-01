@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer } = require('electron')
+const { contextBridge, webFrame, ipcRenderer } = require('electron')
 contextBridge.exposeInMainWorld('electronAPI',{
   sync: (rpc) => {
     return ipcRenderer.invoke('sync', rpc)
@@ -28,5 +28,21 @@ contextBridge.exposeInMainWorld('electronAPI',{
   },
   open: (file_path) => {
     return ipcRenderer.invoke("open", file_path)
+  },
+  xmp: (file_path) => {
+    return ipcRenderer.invoke("xmp", file_path)
+  },
+  zoom: (ratio) => {
+    // ratio 50 - 200
+    if (ratio >= 50 && ratio <= 200) {
+      webFrame.setZoomFactor(ratio/100)
+    }
+  },
+  getzoom: () => {
+    // ratio 50 - 200
+    return webFrame.getZoomFactor()
+  },
+  docs: () => {
+    ipcRenderer.invoke("docs")
   }
 })

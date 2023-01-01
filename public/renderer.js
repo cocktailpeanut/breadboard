@@ -1,64 +1,57 @@
-//var bar = new ProgressBar.Line('.container', {easing: 'easeInOut', duration: 0});
-
-
 async function persist() {
   if (!navigator.storage || !navigator.storage.persisted) {
-    console.log("#1")
     return "never";
   }
   let persisted = await navigator.storage.persisted();
   if (persisted) {
-    console.log("#2")
     return "persisted";
   }
   if (!navigator.permissions || !navigator.permissions.query) {
-    console.log("#3")
     return "prompt"; // It MAY be successful to prompt. Don't know.
   }
   const permission = await navigator.permissions.query({
     name: "persistent-storage"
   });
   if (permission.state === "granted") {
-    console.log("#4")
     persisted = await navigator.storage.persist();
     if (persisted) {
-      console.log("#5")
       return "persisted";
     } else {
-      console.log("#6")
       throw new Error("Failed to persist");
     }
   }
   if (permission.state === "prompt") {
-    console.log("#7")
     return "prompt";
   }
-  console.log("#8")
   return "never";
 }
 
 
+var theme;
 var forceSynchronize = false;
 var bar = new Nanobar({
-  target: document.querySelector(".container")
+  //target: document.querySelector(".container")
+  //target: document.querySelector("body")
+  target: document.querySelector("#bar")
 });
-var worker = new Worker("./worker.js")
-var db = new Dexie("breadboard")
-db.version(1).stores({
-  //files: "app, model, prompt, sampler, weight, steps, cfg_scale, height, width, seed, negative_prompt, mtime, ctime, &filename",
-  //files: "path, model, app, prompt, ctime, *tokens",
-  files: "file_path, model_name, root_path, prompt, btime, *tokens",
-  folders: "&name",
-  checkpoints: "&root_path, btime"
-})
+var worker
+var db;
+
 var counter
 var sorter = {
   direction: -1,
   column: "btime",
   compare: 0
 };
-let tagInput = document.querySelector('#tag-field')
-let tags = tagger(tagInput, {
+let addTagInput = document.querySelector('#add-tag-field')
+let addtags = tagger(addTagInput, {
+  allow_duplicates: false,
+  allow_spaces: false,
+  add_on_blur: true,
+  wrap: true,
+});
+let removeTagInput = document.querySelector('#remove-tag-field')
+let removetags = tagger(removeTagInput, {
   allow_duplicates: false,
   allow_spaces: false,
   add_on_blur: true,
@@ -78,21 +71,82 @@ const deleteSelection = async () => {
       el.remove()
     }, 1000)
   }
-//  document.querySelector("footer").classList.add("hidden")
+  document.querySelector("footer").classList.add("hidden")
   selectedEls = []
   ds.clearSelection()
 }
-document.querySelector("#edit-mode").addEventListener("click", async (e) => {
-  document.querySelector("footer .edit-mode").classList.remove("hidden")
-  document.querySelector("footer .view-mode").classList.add("hidden")
+
+document.querySelector("#prev").addEventListener("click", (e) => {
+  history.back()
 })
-document.querySelector("#view-mode").addEventListener("click", async (e) => {
-  document.querySelector("footer .edit-mode").classList.add("hidden")
-  document.querySelector("footer .view-mode").classList.remove("hidden")
+document.querySelector("#next").addEventListener("click", (e) => {
+  history.forward()
+})
+document.querySelector("#favorites").addEventListener("click", async (e) => {
+  history.pushState({ breadboard: "favorites" }, "")
+  await renderFavorites()
+})
+document.querySelector("#favorite").addEventListener("click", async (e) => {
+  let query = document.querySelector(".search").value
+  if (query && query.length > 0) {
+    let exists = await db.favorites.get({ query })
+    if (exists) {
+      await db.favorites.where({ query }).delete()
+    } else {
+      await db.favorites.put({ query })
+    }
+    await search(query)
+  }
+})
+document.querySelector("#cancel-selection").addEventListener("click", async (e) => {
+  ds.setSelection([])
+  updateSelection([])
+})
+document.querySelector("#tag-menu").addEventListener("click", async (e) => {
+  e.preventDefault()
+  e.stopPropagation()
+  document.querySelector(".tag-menu-items").classList.toggle("hidden")
+  document.querySelector(".tag-menu-collapsed").classList.toggle("hidden")
+  document.querySelector(".tag-menu-expanded").classList.toggle("hidden")
+})
+document.querySelector("#remove-tags").addEventListener("click", async (e) => {
+  let tags = removeTagInput.value.split(",")
+  let selected = selectedEls.map((el) => {
+    return el.getAttribute("data-src")
+  })
+  let response = await window.electronAPI.gm({
+    cmd: "set",
+    args: [
+      selected,
+      [{
+        key: "dc:subject",
+        val: tags,
+        mode: "delete"
+      }]
+    ]
+  })
+  let paths = selectedEls.map((el) => {
+    return {
+      file_path: el.getAttribute("data-src"),
+      root_path: el.getAttribute("data-root")
+    }
+  })
+  await synchronize(paths, async () => {
+    document.querySelector("footer").classList.add("hidden")
+    selectedEls = []
+    document.querySelector(".status").innerHTML = ""
+    let query = document.querySelector(".search").value
+    if (query && query.length > 0) {
+      await search(query)
+    } else {
+      await search()
+    }
+    bar.go(100)
+  })
 })
 document.querySelector("#save-tags").addEventListener("click", async (e) => {
 
-  let tags = tagInput.value.split(",")
+  let tags = addTagInput.value.split(",")
   let selected = selectedEls.map((el) => {
     return el.getAttribute("data-src")
   })
@@ -107,7 +161,6 @@ document.querySelector("#save-tags").addEventListener("click", async (e) => {
       }]
     ]
   })
-  console.log("response", response)
   let items = tags.map((x) => {
     return "tag:" + x
   })
@@ -118,11 +171,10 @@ document.querySelector("#save-tags").addEventListener("click", async (e) => {
     }
   })
   await synchronize(paths, async () => {
-//    document.querySelector("footer").classList.add("hidden")
+    document.querySelector("footer").classList.add("hidden")
     selectedEls = []
     document.querySelector(".status").innerHTML = ""
     let query = items.join(" ")
-    document.querySelector(".search").value = query
     if (query && query.length > 0) {
       await search(query)
     } else {
@@ -144,7 +196,10 @@ document.querySelector("#save-tags").addEventListener("click", async (e) => {
 
 })
 document.querySelector("#delete-selected").addEventListener("click", async (e) => {
-  await deleteSelection()
+  const confirmed = confirm("Delete the selected files from your device?")
+  if (confirmed) {
+    await deleteSelection()
+  }
 })
 document.querySelector("nav select").addEventListener("change", async (e) => {
   if (e.target.value === "1") {
@@ -180,19 +235,21 @@ document.querySelector("nav select").addEventListener("change", async (e) => {
   }
 })
 document.querySelector("#help").addEventListener('click', async (e) => {
+  history.pushState({ breadboard: "help" }, "")
   await renderHelp()
 })
 document.querySelector("#home").addEventListener('click', async (e) => {
-  await render()
+//  await render()
+  await search()
 })
 document.querySelector("#sync").addEventListener('click', async (e) => {
-  e.target.classList.add("disabled")
   await synchronize()
 })
 
 var syncComplete;
 const synchronize = async (paths, cb) => {
-  await render()
+  document.querySelector("#sync").classList.add("disabled")
+//  await render()
   document.querySelector("#sync").disabled = true
   document.querySelector("#sync i").classList.add("fa-spin")
   if (paths) {
@@ -202,7 +259,6 @@ const synchronize = async (paths, cb) => {
     await new Promise((resolve, reject) => {
       window.electronAPI.sync({ paths })
       let interval = setInterval(() => {
-        console.log("counter", counter, syncComplete)
         if (syncComplete) {
           clearInterval(interval)
           resolve()
@@ -227,7 +283,6 @@ const synchronize = async (paths, cb) => {
           force: forceSynchronize
         })
         let interval = setInterval(() => {
-          console.log("counter", counter, syncComplete)
           if (syncComplete) {
             clearInterval(interval)
             resolve()
@@ -247,10 +302,17 @@ const synchronize = async (paths, cb) => {
   }
 //  await render()
 }
+const selectView = (className) => {
+  let classes = ["container", "settings", "help", "favorites"].filter((x) => {
+    return x !== className
+  })
+  for(let c of classes) {
+    document.querySelector("." + c).classList.add("hidden")
+  }
+  document.querySelector("." + className).classList.remove("hidden")
+}
 const renderHelp = async () => {
-  document.querySelector(".container").classList.add("hidden")
-  document.querySelector(".settings").classList.add("hidden")
-  document.querySelector(".help").classList.remove("hidden")
+  selectView("help")
   let res = [{
     name: "discord",
     description: "ask questions and share feedback",
@@ -274,6 +336,13 @@ const renderHelp = async () => {
   }).join("")
   document.querySelector(".help").innerHTML = `<main>
   <div class='header'>
+    <h2>Getting Started</h2>
+  </div>
+  <div class='rows'>
+    <a href="https://breadboard.me" target="_blank" class='item'><b><i class="fa-solid fa-book"></i> Breadboard Manual</b>: Learn how to use breadboard</a>
+  </div>
+  <br><br>
+  <div class='header'>
     <h2>Help</h2>
   </div>
 <div class='rows'>
@@ -281,11 +350,34 @@ ${rows}
 </div>
 </main>`
 }
-const renderSettings = async () => {
-  document.querySelector(".container").classList.add("hidden")
-  document.querySelector(".help").classList.add("hidden")
-  document.querySelector(".settings").classList.remove("hidden")
+const renderFavorites = async () => {
+  selectView("favorites")
+  let res = await db.favorites.toArray()
+  let rows = res.map((r) => {
+    return `<div class='row'><div class='favorite-item' data-val="${r.query}"><i class="fa-solid fa-star"></i> ${r.query}</div></div>`
+  }).join("")
 
+  document.querySelector(".favorites").innerHTML = `<main>
+  <div class='header'>
+    <h2>Saved</h2>
+    <div class='flexible'></div>
+  </div>
+  <div class='rows'>
+  ${rows}
+  </div>
+</main>`
+  document.querySelector(".favorites .rows").addEventListener("click", async (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    let target = (e.target.classList.contains("favorite-item") ? e.target : e.target.closest(".favorite-item"))
+    if (target) {
+      let query = target.getAttribute("data-val")
+      await search(query)
+    }
+  })
+}
+const renderSettings = async () => {
+  selectView("settings")
 
   let res = await db.folders.toArray()
   let rows = res.map((r) => {
@@ -294,31 +386,68 @@ const renderSettings = async () => {
 </div>`
   }).join("")
 
-  let rows2 = [{
-    name: "Hard refresh",
-  }].map((r) => {
-    return `<div class='row'><div>Re-index the files from scratch, just like when you first ran the app.</div></div>`
-  }).join("")
+  let currentZoom = await db.settings.where({ key: "zoom" }).first()
+  let zoom;
+  if (currentZoom) {
+    zoom = currentZoom.val
+  } else {
+    zoom = window.electronAPI.getzoom() * 100
+  }
 
   document.querySelector(".settings").innerHTML = `<main>
   <div class='header'>
-    <h2>Tracked Folders</h2>
+    <h2>Version</h2>
+  </div>
+  <div class='rows'>
+    <div class='row'>${VERSION}</div>
+  </div>
+  <br><br>
+  <div class='header'>
+    <h2>Connected Folders</h2>
     <div class='flexible'></div>
-    <button id='select'>Add a folder</button>
+    <button id='select'><i class="fa-solid fa-folder-plus"></i> Add a folder</button>
   </div>
   <div class='rows'>
   ${rows}
   </div>
   <br><br>
   <div class='header'>
-    <h2>Re-index</h2>
+    <h2>Theme</h2>
     <div class='flexible'></div>
-    <button id='reindex'><i class="fa-solid fa-rotate"></i> Re-index</button>
   </div>
   <div class='rows'>
-  ${rows2}
+    <div class='row'>
+      <button id='dark-theme'><i class="fa-solid fa-moon"></i> Dark</button>
+      <button id='default-theme'><i class="fa-regular fa-sun"></i> Light</button>
+    </div>
+  </div>
+  <br><br>
+  <div class='header'>
+    <h2>Zoom</h2>
+    <div class='flexible'></div>
+  </div>
+  <div class='rows'>
+    <div class='row currentZoom'>${zoom}%</div>
+    <div class='row'>
+      <input type='range' min="50" max="200" value="${zoom}" step="1">
+    </div>
+  </div>
+  <br><br>
+  <div class='header'>
+    <h2>Re-index</h2>
+    <div class='flexible'></div>
+  </div>
+  <div class='rows'>
+    <div class='row'>
+      <button id='reindex'><i class="fa-solid fa-rotate"></i> Re-index</button>
+    </div>
   </div>
 </main>`
+  document.querySelector("input[type=range]").addEventListener("change", async (e) => {
+    window.electronAPI.zoom(e.target.value)
+    await db.settings.put({ key: "zoom", val: e.target.value })
+    e.target.closest(".rows").querySelector(".currentZoom").innerHTML = "" + e.target.value + "%"
+  })
   document.querySelector("#reindex").addEventListener("click", async () => {
     // reset the indexedDB
     await db.files.clear()
@@ -334,6 +463,9 @@ const renderSettings = async () => {
       await db.folders.put({ name: name })
     }
     await renderSettings()
+    setTimeout(async () => {
+      await synchronize()
+    }, 1000)
   })
   document.querySelector(".settings .rows").addEventListener("click", async (e) => {
     e.preventDefault()
@@ -345,9 +477,18 @@ const renderSettings = async () => {
       await renderSettings()
     }
   })
+  document.querySelector("#dark-theme").addEventListener('click', async () => {
+    await db.settings.put({ key: "theme", val: "dark" })
+    await init_theme()
+  })
+  document.querySelector("#default-theme").addEventListener('click', async () => {
+    await db.settings.put({ key: "theme", val: "default" })
+    await init_theme()
+  })
   settingsRendered = true
 }
 document.querySelector("#settings").addEventListener('click', async () => {
+  history.pushState({ breadboard: "settings" }, "")
   await renderSettings()
 })
 document.querySelector(".search").addEventListener('input', (e) => {
@@ -386,6 +527,8 @@ const card = (meta) => {
     let el
     if (attr.key === "model_name" && attr.val) {
       el = `<span class='token' data-value="${attr.val}">${attr.val}</span>`
+    } else if (attr.key === "agent" && attr.val) {
+      el = `<span class='token' data-value="${attr.val}">${attr.val}</span>`
     } else if (attr.key === "tokens" && attr.val && attr.val.length > 0) {
       let els = attr.val.filter((x) => {
         return x.startsWith("tag:")
@@ -397,9 +540,6 @@ const card = (meta) => {
       })
       el = els.join("")
       attr.key = "tags"
-      if (els.length > 0) {
-        console.log("el", el)
-      }
     } else if (attr.key === "prompt" && attr.val) {
       let tokens = attr.val.split(" ").filter(x => x.length > 0)
       let els = []
@@ -420,18 +560,35 @@ const card = (meta) => {
 
     if (attr.key === "tags") {
       return `<tr data-key="${attr.key}"><td>${attr.key}</td><td>${el}</td><td class='edit-td'><button class='edit-tags' data-value="${attr.val}"><i class="fa-solid fa-pen-to-square"></i> <span>edit</span></button></td></tr>`
-    } else if (attr.key === "file_path") {
-      return `<tr data-key="${attr.key}"><td>${attr.key}</td><td>${el}</td><td class='edit-td'><button class='copy-text' data-value="${attr.val}"><i class="fa-regular fa-clone"></i> <span>copy</span></button><button data-src="${attr.val}" class='open-file'><i class="fa-solid fa-up-right-from-square"></i> <span>open</span></button></td></tr>`
+//    } else if (attr.key === "file_path") {
+//      return `<tr data-key="${attr.key}"><td>${attr.key}</td><td>${el}</td><td class='edit-td'><button class='copy-text' data-value="${attr.val}"><i class="fa-regular fa-clone"></i> <span>copy</span></button><button data-src="${attr.val}" class='open-file'><i class="fa-solid fa-up-right-from-square"></i> <span>open</span></button></td></tr>`
     } else {
       return `<tr data-key="${attr.key}"><td>${attr.key}</td><td>${el}</td><td class='copy-td'><button class='copy-text' data-value="${attr.val}"><i class="fa-regular fa-clone"></i> <span>copy</span></button></td></tr>`
     }
   }).join("")
-  return `<img loading='lazy' data-root="${meta.root_path}" data-src="${meta.file_path}" src="/file?file=${encodeURIComponent(meta.file_path)}">
+  //return `<div class='grab'><i class="fa-solid fa-circle"></i></div>
+  //return `<div class='grab'><i class="fa-regular fa-square"></i></div>
+  return `<div class='grab'></div>
+<img loading='lazy' data-root="${meta.root_path}" data-src="${meta.file_path}" src="/file?file=${encodeURIComponent(meta.file_path)}">
 <div class='col'>
   <h4 class='flex'>${meta.prompt}</h4>
+  <div class='xmp'>
+    <div class='xmp-header'>
+      <button class='view-xmp' data-src="${meta.file_path}"><i class="fa-solid fa-code"></i> View XML</button>
+      <!--
+      <button data-src="${meta.file_path}" class='open-file'><i class="fa-solid fa-up-right-from-square"></i> Open</button>
+      <button data-src="/file?file=${encodeURIComponent(meta.file_path)}" class='full-screen'><i class="fa-solid fa-maximize"></i> Fullscreen</button>
+      -->
+    </div>
+    <textarea readonly class='hidden slot'></textarea>
+  </div>
   <table>${times}${trs}</table>
 </div>
-<button class='gofullscreen'><i class="fa-solid fa-expand"></i></button>`
+<div class='extra-buttons'>
+  <button data-src="${meta.file_path}" class='open-file'><i class="fa-solid fa-up-right-from-square"></i></button>
+  <br>
+  <button class='gofullscreen'><i class="fa-solid fa-expand"></i></button>
+</div>`
 }
 
 const stripPunctuation = (str) => {
@@ -439,11 +596,9 @@ const stripPunctuation = (str) => {
 }
 
 const includeSearch = (key, val) => {
-  console.log("includeSearch", key, val)
   // find the key in query
   let query = document.querySelector(".search").value
   let t = query.split(" ").filter(x => x.length > 0)
-  console.log("t", t)
 
   // find prompt search tokens (no :)
   let existingPromptTokens = []
@@ -475,7 +630,6 @@ const includeSearch = (key, val) => {
     let cleaned = (val.startsWith("tag:") ? val : stripPunctuation(val))
     for(let i=0; i<existingPromptTokens.length; i++) {
       let token = existingPromptTokens[i]
-      console.log({ token, cleaned })
       if (token === cleaned) {
         exists = true
       }
@@ -510,15 +664,12 @@ const includeSearch = (key, val) => {
   for(let token of existingAdvancedTokens) {
     result.push(token)
   }
-  console.log("result", result)
-
 
   if (existingPrompts === JSON.stringify(existingPromptTokens) && existingAdvanced === JSON.stringify(existingAdvancedTokens)) {
     // do nothing because they are identical before and after
   } else {
     // there's a change. re render
     let newQuery = result.join(" ")
-    document.querySelector(".search").value = newQuery
     search(newQuery)
     //document.querySelector(".search").dispatchEvent(new Event('input'))
   }
@@ -528,27 +679,38 @@ const includeSearch = (key, val) => {
 
 
 window.electronAPI.onMsg(async (_event, value) => {
-  console.log("MSG", value)
-  let div = document.createElement("div")
-  div.className = "card"
-  queueMicrotask(async () => {
-    if (value.meta) {
-      let response = await insert(value.meta).catch((e) => {
-        console.log("ERROR", e)
-      })
-    }
-    counter++;
-    console.log("counter, total", counter, value.total)
-    if (counter === value.total) {
-      syncComplete = true 
-    }
-    console.log("counter", counter)
-    let ratio = value.progress/value.total
-//    if (ratio < 1) {
+  if (value.$type === "update") {
+    let el = document.querySelector("#notification")
+    el.classList.remove("hidden")
+    tippy(el, {
+      interactive: true,
+      trigger: 'click',
+      content: `<div class='notification-popup'>
+  <h2>${value.latest.title}</h2>
+  <div>${value.latest.content}</div>
+  <div><a href='${value.$url}' id='get-update' target="_blank">Get update</a></div>
+</div>`,
+      allowHTML: true,
+    });
+  } else {
+    let div = document.createElement("div")
+    div.className = "card"
+    queueMicrotask(async () => {
+      if (value.meta) {
+        let response = await insert(value.meta).catch((e) => {
+          console.log("ERROR", e)
+        })
+      }
+      counter++;
+      if (counter === value.total) {
+        syncComplete = true 
+      }
+      let ratio = value.progress/value.total
       bar.go(100*value.progress/value.total);
-//    }
-  })
+    })
+  }
 })
+var viewer;
 document.querySelector(".container").addEventListener("click", async (e) => {
   e.preventDefault()
   e.stopPropagation()
@@ -558,14 +720,15 @@ document.querySelector(".container").addEventListener("click", async (e) => {
   let editTagsTarget = (e.target.classList.contains(".edit-tags") ? e.target : e.target.closest(".edit-tags"))
   let tokenTarget = (e.target.classList.contains(".token") ? e.target : e.target.closest(".token"))
   let tagTarget = (e.target.classList.contains(".tag-item") ? e.target : e.target.closest(".tag-item"))
+  let grabTarget = (e.target.classList.contains(".grab") ? e.target : e.target.closest(".grab"))
   let openFileTarget = (e.target.classList.contains(".open-file") ? e.target : e.target.closest(".open-file"))
+  let displayMetaTarget = (e.target.classList.contains(".view-xmp") ? e.target : e.target.closest(".view-xmp"))
   let card = (e.target.classList.contains("card") ? e.target : e.target.closest(".card"))
   if (card) card.classList.remove("fullscreen")
-  if (fullscreenTarget && e.target.closest(".card.expanded")) {
-    card.classList.remove("expanded")
-    card.classList.add("fullscreen")
+  if (fullscreenTarget) {
+    viewer.show()
+  } else if (grabTarget) {
   } else if (openFileTarget && e.target.closest(".card.expanded")) {
-    console.log("OPEN")
     window.electronAPI.open(openFileTarget.getAttribute("data-src"))
   } else if (tokenTarget && e.target.closest(".card.expanded")) {
     let key = tokenTarget.closest("tr").getAttribute("data-key")
@@ -576,6 +739,13 @@ document.querySelector(".container").addEventListener("click", async (e) => {
     includeSearch("prompt", tag)
   } else if (editTagsTarget && e.target.closest(".card.expanded")) {
     editTagsTarget.closest("tr").classList.toggle("edit-mode")
+  } else if (displayMetaTarget) {
+    let file_path = displayMetaTarget.getAttribute("data-src")
+    let xml = await window.electronAPI.xmp(file_path)
+    let textarea = displayMetaTarget.closest(".xmp").querySelector(".slot")
+    textarea.classList.toggle("hidden")
+    textarea.value = xml;
+    textarea.style.height = "" + (textarea.scrollHeight + 2) + "px";
   } else if (colTarget && e.target.closest(".card.expanded")) {
     // if clicked inside the .col section when NOT expanded, don't do anything.
     // except the clipboard button
@@ -600,6 +770,17 @@ document.querySelector(".container").addEventListener("click", async (e) => {
     let target = (e.target.classList.contains("card") ? e.target : e.target.closest(".card"))
     if (target) {
       target.classList.toggle("expanded")
+      if (target.classList.contains("expanded")) {
+        let img = target.querySelector("img").cloneNode()
+        let scaleFactor = Math.min(window.innerWidth / img.naturalWidth, window.innerHeight / img.naturalHeight)
+        if (viewer) viewer.destroy()
+        viewer = new Viewer(img, {
+          transition: false,
+          viewed() {
+            viewer.zoomTo(scaleFactor)
+          },
+        });
+      }
     }
   }
 })
@@ -616,10 +797,8 @@ hotkeys("shift+left,shift+up", function(e) {
       updateSelection(selectedEls)
     }
   }
-  console.log("left")
 })
 hotkeys("shift+right,shift+down", function(e) {
-  console.log("right")
   if (selectedEls && selectedEls.length > 0) {
     let next = selectedEls[selectedEls.length-1].nextSibling
     if (next) {
@@ -644,10 +823,8 @@ hotkeys("left,up", function(e) {
       updateSelection(selectedEls)
     }
   }
-  console.log("left")
 })
 hotkeys("right,down", function(e) {
-  console.log("right")
   if (selectedEls && selectedEls.length > 0) {
     let next = selectedEls[selectedEls.length-1].nextSibling
     if (next) {
@@ -661,7 +838,6 @@ hotkeys("right,down", function(e) {
   }
 })
 hotkeys("delete,backspace", async function(e) {
-  console.log("delete")
   await deleteSelection()
 })
 hotkeys("escape", function(e) {
@@ -701,13 +877,14 @@ const updateCheckpoint = async (root_path, btime) => {
   checkpoints[root_path] = btime
 }
 const insert = async (o) => {
-
-  console.log("insert", o)
-
   let tokens = []
   let wordSet = {}
   if (o.prompt && typeof o.prompt === 'string' && o.prompt.length > 0) {
-    wordSet = o.prompt.split(' ').reduce(function (prev, current) {
+    wordSet = o.prompt.split(' ')
+    .map((x) => {
+      return stripPunctuation(x)
+    })
+    .reduce(function (prev, current) {
       if (current.length > 0) prev[current] = true;
       return prev;
     }, {});
@@ -718,7 +895,6 @@ const insert = async (o) => {
     }
   }
   tokens = Object.keys(wordSet);
-  console.log("tokens", tokens)
 
   await db.files.put({ ...o, tokens })
 
@@ -744,76 +920,207 @@ var ds;
 var rendered
 var settingsRendered
 const updateSelection = (items) => {
-  let tagItems = tagInput.value.split(",")
-  for(let tagItem of tagItems) {
-    tags.remove_tag(tagItem)
+  let addTagItems = addTagInput.value.split(",")
+  for(let tagItem of addTagItems) {
+    addtags.remove_tag(tagItem)
   }
-  document.querySelector("#delete-selected").innerHTML = "<i class='fa-regular fa-trash-can'></i> Delete " + items.length + " items"
+  let removeTagItems = removeTagInput.value.split(",")
+  for(let tagItem of removeTagItems) {
+    removetags.remove_tag(tagItem)
+  }
+  document.querySelector(".selected-count .counter").innerHTML = items.length;
   selectedEls = items
-//  if (items.length > 0) {
-//    document.querySelector("footer .edit-mode").classList.remove("hidden")
-//  } else {
-//    document.querySelector("footer .edit-mode").classList.add("hidden")
-//  }
+  if (items.length > 0) {
+    document.querySelector("footer").classList.remove("hidden")
+  } else {
+    document.querySelector("footer").classList.add("hidden")
+  }
 }
-worker.onmessage = function(e) {
-  let res = e.data
-  console.log("Res", res)
-  document.querySelector(".content").innerHTML = res.map((item) => {
-    return `<div class='card' data-root="${item.root_path}" data-src="${item.file_path}">${card(item)}</div>`
-  }).join("")
-  clusterize = new Clusterize({
-    scrollElem: document.querySelector(".container"),
-    contentElem: document.querySelector(".content"),
-    rows_in_block: 500,
-    blocks_in_cluster: 10
-  });
-  document.querySelector("#sync").classList.remove("disabled")
-  document.querySelector("#sync").disabled = false
-  document.querySelector("#sync i").classList.remove("fa-spin")
-
-  render()
-
-
-  // dragselect
-  if (ds) ds.stop()
-  ds = new DragSelect({
-    selectables: document.querySelectorAll('.card'),
-    area: document.querySelector(".content"),
-    draggability: false,
-  });
-  ds.subscribe('callback', async (e) => {
-    if (e.items && e.items.length > 0) {
-      // reset tags
-      updateSelection(e.items)
-    } else {
-      selectedEls = []
-//      document.querySelector("footer .edit-mode").classList.add("hidden")
-    }
-  });
-}
-const search = (query) => {
-  console.log("* search", query)
-//  document.querySelector("footer").classList.add("hidden")
+const search = async (query, silent) => {
+  if (!silent) {
+    history.pushState({ query }, "")
+  }
+  if (query && query.length > 0) {
+    document.querySelector("#favorite").classList.remove("hide")
+  } else {
+    document.querySelector("#favorite").classList.add("hide")
+  }
+  document.querySelector(".search").value = (query && query.length ? query : "")
+  document.querySelector("footer").classList.add("hidden")
   document.querySelector(".loading").classList.remove("hidden")
   document.querySelector(".container").classList.add("hidden")
+  if (query) {
+    let favorited = await db.favorites.get(query)
+    if (favorited) {
+      document.querySelector("nav #favorite").classList.add("selected") 
+      document.querySelector("nav #favorite i").className = "fa-solid fa-star"
+    } else {
+      document.querySelector("nav #favorite").classList.remove("selected") 
+      document.querySelector("nav #favorite i").className = "fa-regular fa-star"
+    }
+  } else {
+    document.querySelector("nav #favorite").classList.remove("selected") 
+    document.querySelector("nav #favorite i").className = "fa-regular fa-star"
+  }
   worker.postMessage({ query, sorter })
 }
 const render = () => {
-  console.log("#render")
-  document.querySelector(".container").classList.remove("hidden")
-  document.querySelector(".settings").classList.add("hidden")
-  document.querySelector(".help").classList.add("hidden")
+  selectView("container")
   document.querySelector(".loading").classList.add("hidden")
 }
 const debouncedSearch = debounce(search)
-const init = async () => {
+const initdb = async () => {
+  db = new Dexie("breadboard")
+  db.version(1).stores({
+    //files: "app, model, prompt, sampler, weight, steps, cfg_scale, height, width, seed, negative_prompt, mtime, ctime, &filename",
+    //files: "path, model, app, prompt, ctime, *tokens",
+    files: "file_path, agent, model_name, root_path, prompt, btime, *tokens",
+    folders: "&name",
+    checkpoints: "&root_path, btime",
+    settings: "key, val",
+    favorites: "query"
+  })
+  await persist()
+}
+const fillContainer = async (items) => {
+
+  const chunkSize = 800;
+  document.querySelector(".content").innerHTML = ""
+  document.querySelector(".container").classList.remove("hidden")
+  document.querySelector(".status").innerHTML = "Loading..."
+  console.time("render")
+  for (let i=0; i<items.length; i+=chunkSize) {
+    const chunk = items.slice(i, i + chunkSize);
+    let frag = document.createDocumentFragment();
+    for(let item of chunk) {
+      let el = document.createElement("div")
+      el.className = "card"
+      el.setAttribute("data-root", item.root_path)
+      el.setAttribute("data-src", item.file_path)
+      el.innerHTML = card(item)
+      frag.appendChild(el)
+    }
+    document.querySelector(".content").appendChild(frag)
+    await new Promise(resolve => setTimeout(resolve, 0));
+    bar.go(100 * i/items.length);
+  }
+  console.timeEnd("render")
+  bar.go(100)
+  document.querySelector(".status").innerHTML = ""
+
+
+
+//  document.querySelector(".content").innerHTML = items.map((item) => {
+//    return `<div class='card' data-root="${item.root_path}" data-src="${item.file_path}">${card(item)}</div>`
+//  }).join("")
+}
+const initworker = () => {
+  worker = new Worker("./worker.js")
+  worker.onmessage = async function(e) {
+
+    await fillContainer(e.data)
+
+    render()
+
+    setTimeout(() => {
+      clusterize = new Clusterize({
+        scrollElem: document.querySelector(".container"),
+        contentElem: document.querySelector(".content"),
+        rows_in_block: 500,
+        blocks_in_cluster: 10
+      });
+      document.querySelector("#sync").classList.remove("disabled")
+      document.querySelector("#sync").disabled = false
+      document.querySelector("#sync i").classList.remove("fa-spin")
+
+
+
+      // dragselect
+      if (ds) ds.stop()
+      ds = new DragSelect({
+        selectables: document.querySelectorAll('.card'),
+        area: document.querySelector(".content"),
+        draggability: false,
+      });
+      ds.subscribe('callback', async (e) => {
+        if (e.items && e.items.length > 0) {
+          // reset tags
+          updateSelection(e.items)
+        } else {
+          selectedEls = []
+          document.querySelector("footer").classList.add("hidden")
+        }
+      });
+    }, 0)
+  }
+}
+const init_theme = async () => {
+  theme = await db.settings.where({ key: "theme" }).first()
+  if (!theme) theme = { val: "default" }
+  document.body.className = theme.val
+}
+const init_zoom = async () => {
+  let zoom = await db.settings.where({ key: "zoom" }).first()
+  if (zoom) {
+    window.electronAPI.zoom(zoom.val)
+  }
+}
+const bootstrap_db = async () => {
   let defaults = await window.electronAPI.defaults()
   for(let d of defaults) {
     await db.folders.put({ name: d }).catch((e) => { })
   }
+  await db.settings.put({ key: "version", val: VERSION })
 }
-init().then(async () => {
-  await persist()
-  await synchronize()
-})
+(async () => {
+  console.log("INIT", VERSION)
+  let selector = new TomSelect("nav select", {
+    onDropdownClose: () => {
+      selector.blur()
+    }
+  })
+  await initdb()
+  try {
+    let current_version = await db.settings.where({ key: "version" }).first()
+    if (current_version.val === VERSION) {
+      await init_theme()
+      await init_zoom()
+      initworker()
+      await synchronize()
+    } else {
+      //await db.delete()
+      await db.files.clear()
+      await db.checkpoints.clear()
+      await initdb()
+      await bootstrap_db()
+      await init_theme()
+      await init_zoom()
+      initworker()
+      await synchronize()
+    }
+  } catch (e) {
+    //await db.delete()
+    await db.files.clear()
+    await db.checkpoints.clear()
+    await initdb()
+    await bootstrap_db()
+    await init_theme()
+    await init_zoom()
+    initworker()
+    await synchronize()
+  }
+  window.onpopstate = async () => {
+    if (history.state.breadboard) {
+      // nothing
+      if (history.state.breadboard === "help") {
+        await renderHelp()
+      } else if (history.state.breadboard === "settings") {
+        await renderSettings()
+      } else if (history.state.breadboard === "favorites") {
+        await renderFavorites()
+      }
+    } else {
+      await search(history.state.query, true)
+    }
+  }
+})();
