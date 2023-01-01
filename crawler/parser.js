@@ -231,7 +231,6 @@ class Parser {
         }
       }
     }
-    console.log("serialize", o)
     let stat = await fs.promises.stat(file_path)
     let btime = new Date(stat.birthtime).getTime()
     let mtime = new Date(stat.mtime).getTime()

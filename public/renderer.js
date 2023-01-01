@@ -183,17 +183,6 @@ document.querySelector("#save-tags").addEventListener("click", async (e) => {
     bar.go(100)
   })
 
-//  let selected = selectedEls.map((el) => {
-//    return el.getAttribute("data-src")
-//  })
-//  await db.files.where("file_path").anyOf(selected).modify((x) => {
-//    // get the existing tokens SANS the new tokens
-//    let tokens = x.tokens.filter((token) => {
-//      return !items.includes(token)
-//    })
-//    x.tokens = tokens.concat(items)
-//  });
-
 })
 document.querySelector("#delete-selected").addEventListener("click", async (e) => {
   const confirmed = confirm("Delete the selected files from your device?")
@@ -359,6 +348,14 @@ const renderFavorites = async () => {
 
   document.querySelector(".favorites").innerHTML = `<main>
   <div class='header'>
+    <h2>Special</h2>
+    <div class='flexible'></div>
+  </div>
+  <div class='rows'>
+    <div class='row'><div class='favorite-item' data-val="tag:favorite"><i class="fa-solid fa-heart"></i> tag:favorite</div></div>
+  </div>
+  <br><br>
+  <div class='header'>
     <h2>Saved</h2>
     <div class='flexible'></div>
   </div>
@@ -520,6 +517,20 @@ const card = (meta) => {
   })
   let times = `<tr><td>created</td><td>${timeago.format(meta.btime)}</td><td></td></tr>
 <tr><td>modified</td><td>${timeago.format(meta.mtime)}</td><td></td></tr>`
+
+  let tags = []
+  for(let attr of attributes) {
+    if (attr.key === "tokens") {
+      if (attr.val && attr.val.length > 0) {
+        tags = attr.val.filter((x) => {
+          return x.startsWith("tag:")
+        })
+      }
+      break;
+    }
+  }
+  let is_favorited = tags.includes("tag:favorite")
+
   let trs = attributes.filter((attr) => {
     //return attr.key !== "app" && attr.key !== "tokens"
     return attr.key !== "root_path"
@@ -533,9 +544,8 @@ const card = (meta) => {
       let els = attr.val.filter((x) => {
         return x.startsWith("tag:")
       }).map((x) => {
-        return `<span>
+        return `<span data-tag="${x}">
 <button data-tag="${x}" class='tag-item'><i class="fa-solid fa-tag"></i> ${x.replace("tag:", "")}</button>
-<button data-tag="${x}" class='del-item'><i class="fa-solid fa-xmark"></i></button>
 </span>`
       })
       el = els.join("")
@@ -558,37 +568,36 @@ const card = (meta) => {
       el = attr.val
     }
 
-    if (attr.key === "tags") {
-      return `<tr data-key="${attr.key}"><td>${attr.key}</td><td>${el}</td><td class='edit-td'><button class='edit-tags' data-value="${attr.val}"><i class="fa-solid fa-pen-to-square"></i> <span>edit</span></button></td></tr>`
-//    } else if (attr.key === "file_path") {
-//      return `<tr data-key="${attr.key}"><td>${attr.key}</td><td>${el}</td><td class='edit-td'><button class='copy-text' data-value="${attr.val}"><i class="fa-regular fa-clone"></i> <span>copy</span></button><button data-src="${attr.val}" class='open-file'><i class="fa-solid fa-up-right-from-square"></i> <span>open</span></button></td></tr>`
-    } else {
-      return `<tr data-key="${attr.key}"><td>${attr.key}</td><td>${el}</td><td class='copy-td'><button class='copy-text' data-value="${attr.val}"><i class="fa-regular fa-clone"></i> <span>copy</span></button></td></tr>`
-    }
+    return `<tr data-key="${attr.key}"><td>${attr.key}</td><td class='attr-val'>${el}</td><td class='copy-td'><button class='copy-text' data-value="${attr.val}"><i class="fa-regular fa-clone"></i> <span>copy</span></button></td></tr>`
   }).join("")
-  //return `<div class='grab'><i class="fa-solid fa-circle"></i></div>
-  //return `<div class='grab'><i class="fa-regular fa-square"></i></div>
-  return `<div class='grab'></div>
+
+
+  let favClass = (is_favorited ? "fa-solid fa-heart" : "fa-regular fa-heart")
+
+  return `<div class='grab'>
+  <button class='gofullscreen'><i class="fa-solid fa-expand"></i></button>
+  <button data-src="${meta.file_path}" class='open-file'><i class="fa-solid fa-up-right-from-square"></i></button>
+  <button data-favorited="${is_favorited}" data-src="${meta.file_path}" class='favorite-file'><i class="${favClass}"></i></button>
+  </div>
 <img loading='lazy' data-root="${meta.root_path}" data-src="${meta.file_path}" src="/file?file=${encodeURIComponent(meta.file_path)}">
 <div class='col'>
   <h4 class='flex'>${meta.prompt}</h4>
   <div class='xmp'>
     <div class='xmp-header'>
       <button class='view-xmp' data-src="${meta.file_path}"><i class="fa-solid fa-code"></i> View XML</button>
-      <!--
-      <button data-src="${meta.file_path}" class='open-file'><i class="fa-solid fa-up-right-from-square"></i> Open</button>
-      <button data-src="/file?file=${encodeURIComponent(meta.file_path)}" class='full-screen'><i class="fa-solid fa-maximize"></i> Fullscreen</button>
-      -->
     </div>
     <textarea readonly class='hidden slot'></textarea>
   </div>
   <table>${times}${trs}</table>
 </div>
+<!--
 <div class='extra-buttons'>
+  <button class='gofullscreen'><i class="fa-solid fa-expand"></i></button>
+  <br>
   <button data-src="${meta.file_path}" class='open-file'><i class="fa-solid fa-up-right-from-square"></i></button>
   <br>
-  <button class='gofullscreen'><i class="fa-solid fa-expand"></i></button>
-</div>`
+  <button data-favorited="${is_favorited}" data-src="${meta.file_path}" class='favorite-file'><i class="${favClass}"></i></button>
+</div>-->`
 }
 
 const stripPunctuation = (str) => {
@@ -671,7 +680,6 @@ const includeSearch = (key, val) => {
     // there's a change. re render
     let newQuery = result.join(" ")
     search(newQuery)
-    //document.querySelector(".search").dispatchEvent(new Event('input'))
   }
     
 
@@ -717,19 +725,84 @@ document.querySelector(".container").addEventListener("click", async (e) => {
   let colTarget = (e.target.classList.contains(".col") ? e.target : e.target.closest(".col"))
   let fullscreenTarget = (e.target.classList.contains(".gofullscreen") ? e.target : e.target.closest(".gofullscreen"))
   let clipboardTarget = (e.target.classList.contains(".copy-text") ? e.target : e.target.closest(".copy-text"))
-  let editTagsTarget = (e.target.classList.contains(".edit-tags") ? e.target : e.target.closest(".edit-tags"))
   let tokenTarget = (e.target.classList.contains(".token") ? e.target : e.target.closest(".token"))
   let tagTarget = (e.target.classList.contains(".tag-item") ? e.target : e.target.closest(".tag-item"))
   let grabTarget = (e.target.classList.contains(".grab") ? e.target : e.target.closest(".grab"))
   let openFileTarget = (e.target.classList.contains(".open-file") ? e.target : e.target.closest(".open-file"))
   let displayMetaTarget = (e.target.classList.contains(".view-xmp") ? e.target : e.target.closest(".view-xmp"))
+  let favoriteFileTarget = (e.target.classList.contains(".favorite-file") ? e.target : e.target.closest(".favorite-file"))
   let card = (e.target.classList.contains("card") ? e.target : e.target.closest(".card"))
   if (card) card.classList.remove("fullscreen")
   if (fullscreenTarget) {
+    let img = fullscreenTarget.closest(".card").querySelector("img").cloneNode()
+    let scaleFactor = Math.min(window.innerWidth / img.naturalWidth, window.innerHeight / img.naturalHeight)
+    if (viewer) viewer.destroy()
+    viewer = new Viewer(img, {
+      transition: false,
+      viewed() {
+        viewer.zoomTo(scaleFactor)
+      },
+    });
     viewer.show()
-  } else if (grabTarget) {
-  } else if (openFileTarget && e.target.closest(".card.expanded")) {
+  } else if (openFileTarget) {
     window.electronAPI.open(openFileTarget.getAttribute("data-src"))
+  } else if (favoriteFileTarget) {
+    console.log("favoriteFileTarget", favoriteFileTarget)
+    let data_favorited = favoriteFileTarget.getAttribute("data-favorited")
+    let is_favorited = (data_favorited === "true" ? true : false)
+    let src = favoriteFileTarget.getAttribute("data-src")
+    let root = favoriteFileTarget.closest(".card").querySelector("img").getAttribute("data-root")
+    let favClass
+    if (is_favorited) {
+      // unfavorite
+      let response = await window.electronAPI.gm({
+        cmd: "set",
+        args: [
+          src,
+          [{
+            key: "dc:subject",
+            val: ["favorite"],
+            mode: "delete"
+          }]
+        ]
+      })
+      favoriteFileTarget.setAttribute("data-favorited", "false")
+      favClass = "fa-regular fa-heart"
+
+      // remove 'favorite' tag from the tags area
+      favoriteFileTarget.closest(".card").querySelector("tr[data-key=tags] td span[data-tag='tag:favorite']").remove()
+    } else {
+      // favorite
+      let response = await window.electronAPI.gm({
+        cmd: "set",
+        args: [
+          src,
+          [{
+            key: "dc:subject",
+            val: ["favorite"],
+            mode: "merge"
+          }]
+        ]
+      })
+      favoriteFileTarget.setAttribute("data-favorited", "true")
+      favClass = "fa-solid fa-heart"
+
+      // add 'favorite' tag
+      let span = document.createElement("span")
+      span.setAttribute("data-tag", "tag:favorite")
+      span.innerHTML = `<button data-tag="tag:favorite" class='tag-item'><i class="fa-solid fa-tag"></i> favorite</button>`
+      favoriteFileTarget.closest(".card").querySelector("tr[data-key=tags] td.attr-val").appendChild(span)
+    }
+    favoriteFileTarget.querySelector("i").className = favClass
+
+    await synchronize([{ file_path: src, root_path: root }], async () => {
+      console.log("done")
+      document.querySelector(".status").innerHTML = ""
+      document.querySelector("#sync").classList.remove("disabled")
+      document.querySelector("#sync").disabled = false
+      document.querySelector("#sync i").classList.remove("fa-spin")
+    })
+  } else if (grabTarget) {
   } else if (tokenTarget && e.target.closest(".card.expanded")) {
     let key = tokenTarget.closest("tr").getAttribute("data-key")
     let val = tokenTarget.getAttribute("data-value")
@@ -737,8 +810,6 @@ document.querySelector(".container").addEventListener("click", async (e) => {
   } else if (tagTarget && e.target.closest(".card.expanded")) {
     let tag = tagTarget.getAttribute("data-tag")
     includeSearch("prompt", tag)
-  } else if (editTagsTarget && e.target.closest(".card.expanded")) {
-    editTagsTarget.closest("tr").classList.toggle("edit-mode")
   } else if (displayMetaTarget) {
     let file_path = displayMetaTarget.getAttribute("data-src")
     let xml = await window.electronAPI.xmp(file_path)
@@ -972,8 +1043,6 @@ const debouncedSearch = debounce(search)
 const initdb = async () => {
   db = new Dexie("breadboard")
   db.version(1).stores({
-    //files: "app, model, prompt, sampler, weight, steps, cfg_scale, height, width, seed, negative_prompt, mtime, ctime, &filename",
-    //files: "path, model, app, prompt, ctime, *tokens",
     files: "file_path, agent, model_name, root_path, prompt, btime, *tokens",
     folders: "&name",
     checkpoints: "&root_path, btime",
@@ -1008,11 +1077,6 @@ const fillContainer = async (items) => {
   bar.go(100)
   document.querySelector(".status").innerHTML = ""
 
-
-
-//  document.querySelector(".content").innerHTML = items.map((item) => {
-//    return `<div class='card' data-root="${item.root_path}" data-src="${item.file_path}">${card(item)}</div>`
-//  }).join("")
 }
 const initworker = () => {
   worker = new Worker("./worker.js")
@@ -1088,7 +1152,6 @@ const bootstrap_db = async () => {
       initworker()
       await synchronize()
     } else {
-      //await db.delete()
       await db.files.clear()
       await db.checkpoints.clear()
       await initdb()
@@ -1099,7 +1162,6 @@ const bootstrap_db = async () => {
       await synchronize()
     }
   } catch (e) {
-    //await db.delete()
     await db.files.clear()
     await db.checkpoints.clear()
     await initdb()

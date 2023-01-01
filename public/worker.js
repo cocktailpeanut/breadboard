@@ -1,7 +1,6 @@
 importScripts("./dexie.js")
 var db = new Dexie("breadboard")
 db.version(1).stores({
-  //files: "path, model, app, prompt, ctime, *tokens",
   files: "file_path, agent, model_name, root_path, prompt, btime, *tokens",
   folders: "&name",
   checkpoints: "&root_path, btime",
@@ -63,8 +62,6 @@ function find (phrase) {
       tokens.push(prefix)
     }
   }
-  console.log("filters", filters)
-
 
   return db.transaction('r', db.files, function*() {
     let promises

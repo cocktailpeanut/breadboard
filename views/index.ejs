@@ -79,12 +79,15 @@
         z-index: 1000;
       }
       .card .extra-buttons button {
-        font-size: 30px;
+        font-size: 15px;
         color: white;
         margin: 5px;
-        width: 40px;
-        height: 40px;
+        width: 30px;
+        padding: 5px;
+        box-sizing: border-box;
         background: rgba(0,0,0,0.3);
+        text-align: center;
+        vertical-align: middle;
         border: none;
         cursor: pointer;
       }
@@ -94,7 +97,12 @@
       }
       */
       .card .grab {
+      /*
         height: 15px;
+        */
+        padding: 5px;
+        box-sizing: border-box;
+        text-align: right;
         cursor: pointer;
         /*
         color: rgba(0,0,0,0.7);
@@ -123,6 +131,15 @@
         display: none;
       }
       */
+      .grab button:hover {
+        color: royalblue;
+      }
+      .grab button {
+        padding: 5px;
+        background: none;
+        border: none;
+        cursor: pointer;
+      }
       .card.expanded .extra-buttons {
         display: inline-block;
       }
@@ -194,7 +211,7 @@
         text-decoration: underline;
       }
       .card h4 {
-        padding: 5px 10px;
+        padding: 0px 10px;
         font-weight: normal;
         box-sizing: border-box;
         margin:0;
@@ -204,6 +221,12 @@
         -moz-transition: font-size 0.2s ease-in-out;
         -o-transition: font-size 0.2s ease-in-out;
         transition: font-size 0.2s ease-in-out;
+      }
+      .card:not(.expanded) h4 {
+        display: -webkit-box !important;
+        -webkit-line-clamp: 6;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
       }
       .card img {
         width: 100%;
@@ -232,6 +255,9 @@
         font-weight: bold;
         border: none;
         cursor: pointer;
+      }
+      .card .fa-heart.fa-solid {
+        color: red;
       }
       nav button, nav .status, nav input, footer button {
         -webkit-app-region: no-drag;
@@ -464,12 +490,6 @@
         margin-right: 5px;
         cursor: pointer;
       }
-      tr .del-item {
-        display: none;
-      }
-      tr.tags.edit-mode .del-item {
-        display: inline-block;
-      }
       footer .tag-menu-items {
         border-left: 1px solid rgba(0,0,0,0.1);
         padding: 10px;
@@ -577,12 +597,14 @@
         outline: 3px solid cornflowerblue;
         outline-offset: 3px;
       }
+      /*
       body.default .card .grab:hover {
         background: royalblue;
       }
       body.default .card.ds-selected .grab {
         background: royalblue;
       }
+      */
       body.default footer > * {
         color: black; 
         border-left: 1px solid #eee;
@@ -627,6 +649,9 @@
         color: royalblue;
       }
       body.default .selected-count {
+        color: rgba(0,0,0,0.9);
+      }
+      body.default .grab button {
         color: rgba(0,0,0,0.9);
       }
 
@@ -699,15 +724,14 @@
         outline: 3px solid cornflowerblue;
         outline-offset: 3px;
       }
+      /*
       body.dark .card .grab:hover {
         background: cornflowerblue;
       }
       body.dark .card.ds-selected .grab {
-      /*
-        color: cornflowerblue;
-        */
         background: cornflowerblue;
       }
+      */
       body.dark .settings, body.dark .favorites, body.dark .help {
         color: rgba(255,255,255,0.9);
       }
@@ -769,6 +793,9 @@
         color: cornflowerblue;
       }
       body.dark .selected-count {
+        color: rgba(255,255,255,0.9);
+      }
+      body.dark .grab button {
         color: rgba(255,255,255,0.9);
       }
 
