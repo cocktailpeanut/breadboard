@@ -195,57 +195,12 @@ class App {
   }
   init_worker () {
     this.worker = new Worker("./worker.js")
-  //  clusterize = new Clusterize({
-  //    scrollElem: document.querySelector(".container"),
-  //    contentElem: document.querySelector(".content"),
-  //    rows_in_block: 500,
-  //    blocks_in_cluster: 10
-  //  });
-
-
-
-  //  ds = new DragSelect({
-  //    selectables: document.querySelectorAll('.card'),
-  //    area: document.querySelector(".content"),
-  //    draggability: false,
-  //  });
-  //  ds.subscribe('callback', async (e) => {
-  //    if (e.items && e.items.length > 0) {
-  //      // reset tags
-  //      updateSelection(e.items)
-  //    } else {
-  //      selectedEls = []
-  //      document.querySelector("footer").classList.add("hidden")
-  //    }
-  //  });
     this.worker.onmessage = async (e) => {
       await this.fill(e.data)
       setTimeout(() => {
-  //      if (clusterize) {
-  //        clusterize.destroy(true)
-  //      } else {
-  //        clusterize = new Clusterize({
-  //          scrollElem: document.querySelector(".container"),
-  //          contentElem: document.querySelector(".content"),
-  //          rows_in_block: 500,
-  //          blocks_in_cluster: 10
-  //        });
-  //      }
-//        console.time("clusterize")
-//    this.clusterize = new Clusterize({
-////      rows: data,
-//      scrollElem: document.querySelector(".container"),
-//      contentElem: document.querySelector(".content"),
-//      rows_in_block: 500,
-//      blocks_in_cluster: 10
-//    });
-//        console.timeEnd("clusterize")
-
         document.querySelector("#sync").classList.remove("disabled")
         document.querySelector("#sync").disabled = false
         document.querySelector("#sync i").classList.remove("fa-spin")
-
-
         this.selection.init()
       }, 0)
     }
@@ -313,21 +268,13 @@ class App {
   //  await render()
   }
   async fill (items) {
-  console.time("fill")
-
+    console.time("fill")
     const chunkSize = 800;
-  //  document.querySelector(".content").innerHTML = ""
     document.querySelector(".container").classList.remove("hidden")
     document.querySelector(".status").innerHTML = "Loading..."
-  //  document.querySelector(".content").innerHTML = items.map((item) => {
-  //    return `<div class='card' data-root="${item.root_path}" data-src="${item.file_path}">${card(item)}</div>`
-  //  }).join("")
-
     let data = items.map((item) => {
       return `<div class='card' data-root="${item.root_path}" data-src="${item.file_path}">${card(item)}</div>`
     })
-
-
     this.clusterize = new Clusterize({
       rows: data,
       scrollElem: document.querySelector(".container"),
@@ -335,87 +282,11 @@ class App {
       rows_in_block: 500,
       blocks_in_cluster: 10
     });
-
-
-
-  //
-  //
-  //  
-  //  if (ds) ds.stop(true, true)
-  //  ds = null
-  //  ds = new DragSelect({
-  //    selectables: document.querySelectorAll('.card'),
-  //    area: document.querySelector(".content"),
-  //    draggability: false,
-  //  });
-  //  ds.subscribe('callback', async (e) => {
-  //    if (e.items && e.items.length > 0) {
-  //      // reset tags
-  //      updateSelection(e.items)
-  //    } else {
-  //      selectedEls = []
-  //      document.querySelector("footer").classList.add("hidden")
-  //    }
-  //  });
-
-
-
-/*
-    for (let i=0; i<items.length; i+=chunkSize) {
-      console.log("i", i)
-      const chunk = items.slice(i, i + chunkSize);
-//      clusterize.append(chunk.map((item) => {
-//        return `<div class='card' data-root="${item.root_path}" data-src="${item.file_path}">${card(item)}</div>`
-//      }))
-  
-  
-      let frag = document.createDocumentFragment();
-      for(let item of chunk) {
-        let el = document.createElement("div")
-        el.className = "card"
-        el.setAttribute("data-root", item.root_path)
-        el.setAttribute("data-src", item.file_path)
-        el.innerHTML = card(item)
-        frag.appendChild(el)
-      }
-      document.querySelector(".content").appendChild(frag)
-//      this.bar.go(100 * i/items.length);
-      await new Promise(resolve => setTimeout(resolve, 0));
-    }
-    */
-
-
-  //  let els = []
-  //  for (let i=0; i<items.length; i++) {
-  //    let item = items[i]
-  //    let el = document.createElement("div")
-  //    el.className = "card"
-  //    el.setAttribute("data-root", item.root_path)
-  //    el.setAttribute("data-src", item.file_path)
-  //    el.innerHTML = card(item)
-  //    els.push(el)
-  //    bar.go(100 * i/items.length);
-  //  }
-  //  document.querySelector(".content").replaceChildren(...els)
-
-
-
-  //  console.time("ds.start")
-  //  ds.setSettings({
-  //    selectables: document.querySelectorAll('.card'),
-  //  })
-  //  ds.start()
-  //  console.timeEnd("ds.start")
-//    this.bar.go(100)
     document.querySelector(".status").innerHTML = ""
-  console.timeEnd("fill")
     document.querySelector(".loading").classList.add("hidden")
-
+    console.timeEnd("fill")
   }
   async draw () {
-  //  if (!silent) {
-  //    history.pushState({ query }, "")
-  //  }
     document.querySelector(".loading").classList.remove("hidden")
     document.querySelector(".search").value = (this.query && this.query.length ? this.query : "")
     document.querySelector("footer").classList.add("hidden")
