@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>breadboard</title>
+    <link href="/css/fontawesome.min.css" rel="stylesheet">
+    <link href="/css/solid.min.css" rel="stylesheet">
+    <link href="/css/regular.min.css" rel="stylesheet">
+    <link href="/css/brands.min.css" rel="stylesheet">
+    <link href="./global.css" rel="stylesheet" />
+    </style>
+  </head>
+  <body>
+    <div id='bar'></div>
+    <nav class="<%=platform%>">
+      <a class='btn' href="/" class='btn'><i class="fa-solid fa-house"></i></a>
+      <button id='prev'><i class="fa-solid fa-chevron-left"></i></button>
+      <button id='next'><i class="fa-solid fa-chevron-right"></i></button>
+      <a class='btn' href="/favorites"><i class="fa-solid fa-star"></i></a>
+      <button id="sync"><i class="fa-solid fa-rotate"></i></button>
+      <div class='status'></div>
+      <input type='search' placeholder='search' class='search flexible'>
+      <a class='btn' href="/help"><i class="fa-solid fa-question"></i></a>
+      <a class='btn' href="/settings"><i class="fa-solid fa-gear"></i></a>
+      <button id='notification' class= 'hidden'><i class="fa-solid fa-bell"></i></button>
+    </nav>
+    <div class='favorites'>
+    </div>
+    <script src="./dexie.js"></script>
+    <script>
+    let db;
+    const init_db = async () => {
+      db = new Dexie("breadboard")
+      db.version(1).stores({
+        files: "file_path, agent, model_name, root_path, prompt, btime, mtime, *tokens",
+        folders: "&name",
+        checkpoints: "&root_path, btime",
+        settings: "key, val",
+        favorites: "query"
+      })
+    }
+    const init_theme = async () => {
+      let theme = await db.settings.where({ key: "theme" }).first()
+      if (!theme) theme = { val: "default" }
+      document.body.className = theme.val
+    }
+    const search = (query) => {
+      if (query && query.length > 0) {
+        location.href = "/?query=" + query
+      } else {
+        location.href = "/"
+      }
+    }
+    const renderFavorites = async () => {
+      let res = await db.favorites.toArray()
+      let rows = res.map((r) => {
+        return `<a class='row' href="/?query=${r.query}"><i class="fa-solid fa-star"></i>&nbsp;${r.query}</a>`
+      }).join("")
+
+      document.querySelector(".favorites").innerHTML = `<main>
+      <div class='header'>
+        <h2>Special</h2>
+        <div class='flexible'></div>
+      </div>
+      <div class='rows'>
+        <a href="/?query=tag:favorite" class='row'><i class="fa-solid fa-heart"></i>&nbsp;tag:favorite</a>
+      </div>
+      <br><br>
+      <div class='header'>
+        <h2>Saved</h2>
+        <div class='flexible'></div>
+      </div>
+      <div class='rows'>
+      ${rows}
+      </div>
+    </main>`
+    }
+    (async () => {
+      await init_db()
+      await init_theme()
+      await renderFavorites()
+    })();
+    </script>
+  </body>
+</html>

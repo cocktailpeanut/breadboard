@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>breadboard</title>
+    <link href="/css/fontawesome.min.css" rel="stylesheet">
+    <link href="/css/solid.min.css" rel="stylesheet">
+    <link href="/css/regular.min.css" rel="stylesheet">
+    <link href="/css/brands.min.css" rel="stylesheet">
+    <link href="./global.css" rel="stylesheet" />
+    </style>
+  </head>
+  <body>
+    <div id='bar'></div>
+    <nav class="<%=platform%>">
+      <a class='btn' href="/" class='btn'><i class="fa-solid fa-house"></i></a>
+      <button id='prev'><i class="fa-solid fa-chevron-left"></i></button>
+      <button id='next'><i class="fa-solid fa-chevron-right"></i></button>
+      <a class='btn' href="/favorites"><i class="fa-solid fa-star"></i></a>
+      <button id="sync"><i class="fa-solid fa-rotate"></i></button>
+      <div class='status'></div>
+      <input type='search' placeholder='search' class='search flexible'>
+      <a class='btn' href="/help"><i class="fa-solid fa-question"></i></a>
+      <a class='btn' href="/settings"><i class="fa-solid fa-gear"></i></a>
+      <button id='notification' class= 'hidden'><i class="fa-solid fa-bell"></i></button>
+    </nav>
+    <div class='settings'></div>
+    <script src="./dexie.js"></script>
+    <script>
+    let db;
+    const VERSION = "<%=version%>"
+    const init_db = async () => {
+      db = new Dexie("breadboard")
+      db.version(1).stores({
+        files: "file_path, agent, model_name, root_path, prompt, btime, mtime, *tokens",
+        folders: "&name",
+        checkpoints: "&root_path, btime",
+        settings: "key, val",
+        favorites: "query"
+      })
+    }
+    const init_theme = async () => {
+      let theme = await db.settings.where({ key: "theme" }).first()
+      if (!theme) theme = { val: "default" }
+      document.body.className = theme.val
+    }
+    const search = (query) => {
+      if (query && query.length > 0) {
+        location.href = "/?query=" + query
+      } else {
+        location.href = "/"
+      }
+    }
+    const renderSettings = async () => {
+      let res = await db.folders.toArray()
+      let rows = res.map((r) => {
+        return `<div class='row'>
+        <div>${r.name}</div><div class='flexible'></div><button class='del' data-name='${r.name}'><i class="fa-regular fa-trash-can"></i></button>
+    </div>`
+      }).join("")
+
+      let currentZoom = await db.settings.where({ key: "zoom" }).first()
+      let zoom;
+      if (currentZoom) {
+        zoom = currentZoom.val
+      } else {
+        zoom = window.electronAPI.getzoom() * 100
+      }
+
+      document.querySelector(".settings").innerHTML = `<main>
+      <div class='header'>
+        <h2>Version</h2>
+      </div>
+      <div class='rows'>
+        <div class='row'>${VERSION}</div>
+      </div>
+      <br><br>
+      <div class='header'>
+        <h2>Connected Folders</h2>
+        <div class='flexible'></div>
+        <button id='select'><i class="fa-solid fa-folder-plus"></i> Add a folder</button>
+      </div>
+      <div class='rows'>
+      ${rows}
+      </div>
+      <br><br>
+      <div class='header'>
+        <h2>Theme</h2>
+        <div class='flexible'></div>
+      </div>
+      <div class='rows'>
+        <div class='row'>
+          <button id='dark-theme'><i class="fa-solid fa-moon"></i> Dark</button>
+          <button id='default-theme'><i class="fa-regular fa-sun"></i> Light</button>
+        </div>
+      </div>
+      <br><br>
+      <div class='header'>
+        <h2>Zoom</h2>
+        <div class='flexible'></div>
+      </div>
+      <div class='rows'>
+        <div class='row currentZoom'>${zoom}%</div>
+        <div class='row'>
+          <input type='range' min="50" max="200" value="${zoom}" step="1">
+        </div>
+      </div>
+      <br><br>
+      <div class='header'>
+        <h2>Re-index</h2>
+        <div class='flexible'></div>
+      </div>
+      <div class='rows'>
+        <div class='row'>
+          <button id='reindex'><i class="fa-solid fa-rotate"></i> Re-index</button>
+        </div>
+      </div>
+    </main>`
+      document.querySelector("input[type=range]").addEventListener("change", async (e) => {
+        window.electronAPI.zoom(e.target.value)
+        await db.settings.put({ key: "zoom", val: e.target.value })
+        e.target.closest(".rows").querySelector(".currentZoom").innerHTML = "" + e.target.value + "%"
+      })
+      document.querySelector("#reindex").addEventListener("click", async () => {
+        // reset the indexedDB
+
+//        await db.files.clear()
+//        await db.checkpoints.clear()
+        await db.delete()    // only for this version => from next version will be upgraded
+
+
+
+        location.href = "/?synchronize=reindex"
+        /*
+        // force synchronize
+        forceSynchronize = true
+        await synchronize()
+        forceSynchronize = false
+        */
+      })
+      document.querySelector("#select").addEventListener('click', async () => {
+        let paths = await window.electronAPI.select()
+        for(let name of paths) {
+          await db.folders.put({ name: name })
+        }
+        await renderSettings()
+        setTimeout(async () => {
+//          await synchronize()
+          location.href = "/?synchronize=true"
+        }, 1000)
+      })
+      document.querySelector(".settings .rows").addEventListener("click", async (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        let target = (e.target.classList.contains("del") ? e.target : e.target.closest(".del"))
+        if (target) {
+          let name = target.getAttribute("data-name")
+          await db.folders.where({ name }).delete()
+          await renderSettings()
+        }
+      })
+      document.querySelector("#dark-theme").addEventListener('click', async () => {
+        await db.settings.put({ key: "theme", val: "dark" })
+        await init_theme()
+      })
+      document.querySelector("#default-theme").addEventListener('click', async () => {
+        await db.settings.put({ key: "theme", val: "default" })
+        await init_theme()
+      })
+      settingsRendered = true
+    }
+    (async () => {
+      await init_db()
+      await init_theme()
+      await renderSettings()
+    })();
+    </script>
+  </body>
+</html>

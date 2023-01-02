@@ -1,0 +1,800 @@
+html {
+  height: 100%;
+  width: 100%;
+}
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: rgba(0,0,100,0.05);
+  font-family: Sans-serif;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+.flex {
+  display: flex !important;
+}
+.container {
+  flex-grow: 1;
+  outline: none;
+  padding-bottom: 300px;
+}
+.loading {
+  padding: 50px;
+  text-align: center;
+}
+.content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  outline: none;
+}
+.content:empty {
+  height: 1000px;
+}
+.card {
+  width: 200px;
+  background: white;
+  /*
+  padding: 20px;
+  */
+  box-sizing: border-box;
+  align-items: flex-start;
+  margin: 10px;
+
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  -ms-word-break: break-all;
+  word-break: break-word;
+
+  -webkit-transition: width 0.2s ease-in-out, opacity 0.2s ease-in-out;
+  -moz-transition: width 0.2s ease-in-out, opacity 0.2s ease-in-out;
+  -o-transition: width 0.2s ease-in-out, opacity 0.2s ease-in-out;
+  transition: width 0.2s ease-in-out, opacity 0.2s ease-in-out;
+
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  position: relative;
+}
+.card .xmp {
+  display: none;
+}
+.card .extra-buttons {
+  display: none;
+  position: absolute;
+  top: 15px;
+  right: 0px;
+  z-index: 1000;
+}
+.card .extra-buttons button {
+  font-size: 15px;
+  color: white;
+  margin: 5px;
+  width: 30px;
+  padding: 5px;
+  box-sizing: border-box;
+  background: rgba(0,0,0,0.3);
+  text-align: center;
+  vertical-align: middle;
+  border: none;
+  cursor: pointer;
+}
+/*
+.card .grab:hover {
+  background: royalblue;
+}
+*/
+.card .grab {
+/*
+  height: 15px;
+  */
+  padding: 5px;
+  box-sizing: border-box;
+  text-align: right;
+  cursor: pointer;
+  /*
+  color: rgba(0,0,0,0.7);
+  */
+}
+/*
+.card .grab {
+  display: inline-block;
+  font-size: 30px;
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  z-index: 1000;
+  color: rgba(255,255,255,0.4);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+*/
+.card.fullscreen {
+  width: 100% !important;
+}
+/*
+.card.expanded .grab {
+  display: none;
+}
+*/
+.grab button:hover {
+  color: royalblue;
+}
+.grab button {
+  padding: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.card.expanded .extra-buttons {
+  display: inline-block;
+}
+.card.expanded .gofullscreen:hover {
+  color: yellow;
+}
+.card.removed {
+  opacity: 0;
+  /*
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  padding: 0;
+  */
+}
+.card.expanded {
+  width: 600px;
+  -webkit-user-select: auto;
+  -ms-user-select: auto;
+  user-select: auto;
+}
+.card.expanded td {
+/*
+  display: table-cell;
+  */
+  font-size: 1rem;
+}
+.card.expanded h4, .card.fullscreen h4 {
+  display: block;
+  font-size: 2.0rem;
+  font-weight: bold;
+  padding: 10px 10px 20px;
+}
+.card.expanded header, .card.fullscreen header {
+  padding: 10px 0;
+  box-sizing: border-box;
+  display: block;
+}
+.card.expanded table, .card.fullscreen table {
+  display: block;
+}
+.card.expanded .xmp, .card.fullscreen .xmp {
+  display: block;
+}
+.card table {
+  display: none;
+  width: 100%;
+}
+.card td {
+  border-top: 1px solid whitesmoke;
+  padding: 5px;
+  box-sizing: border-box;
+  font-size: 1rem;
+  min-width: 100px;
+  vertical-align: top;
+  display: table-cell;
+
+  -webkit-transition: all 0.2s ease-in-out;
+  -moz-transition: all 0.2s ease-in-out;
+  -o-transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
+}
+.card td span.token:hover {
+  color: firebrick;
+}
+.card td span.token {
+  cursor: pointer;
+  color: royalblue;
+  text-decoration: underline;
+}
+.card h4 {
+  padding: 0px 10px;
+  font-weight: normal;
+  box-sizing: border-box;
+  margin:0;
+  font-size: 1.0rem;
+  display: block;
+  -webkit-transition: font-size 0.2s ease-in-out;
+  -moz-transition: font-size 0.2s ease-in-out;
+  -o-transition: font-size 0.2s ease-in-out;
+  transition: font-size 0.2s ease-in-out;
+}
+.card:not(.expanded) h4 {
+  display: -webkit-box !important;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.card img {
+  width: 100%;
+  box-sizing: border-box;
+  display: block;
+  cursor: pointer;
+}
+.card .col {
+  padding: 10px 0;
+  box-sizing: border-box;
+}
+.card pre {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  -ms-word-break: break-all;
+  word-break: break-word;
+}
+.card header {
+  display: none;
+}
+.card .btn.delete {
+  background: black;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+}
+.card .fa-heart.fa-solid {
+  color: red;
+}
+nav button, nav .status, nav input, footer button {
+  -webkit-app-region: no-drag;
+  cursor: auto;
+}
+td .attribute {
+  padding: 2px 5px;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  -ms-word-break: break-all;
+  word-break: break-word;
+  border-top-right-radius: 4px; 
+  border-bottom-right-radius: 4px; 
+}
+.card td.copy-td, .card td.edit-td {
+  width: 50px !important;
+  text-align: right;
+}
+.card tr:hover button.copy-text, .card tr:hover button.edit-tags, .card tr:hover button.open-file {
+  visibility: visible;
+}
+tr button.copy-text, tr button.edit-tags, tr button.open-file {
+  visibility: hidden;
+  border-radius: 4px; 
+  margin: 2px;
+  padding: 2px 5px;
+  border: 1px solid rgba(0,0,0,0.1);
+  cursor: pointer;
+}
+nav.darwin {
+  padding: 30px 10px 5px;
+}
+nav {
+  -webkit-app-region: drag;
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  z-index: 10000;
+  cursor: grab;
+}
+nav select {
+  padding: 10px 10px 10px 0;
+  outline: none;
+  text-transform: uppercase;
+  cursor: pointer;
+  text-align: right;
+  color: black;
+  border: none;
+}
+nav > * {
+  margin: 10px;
+  display: block;
+}
+nav button, nav .btn {
+  cursor: pointer;
+  font-weight: bold;
+  background: white;
+  color: black;
+  border: none;
+  width: 30px;
+  height: 30px;
+  box-sizing: border-box;
+  text-decoration: none;
+  border-radius: 4px;
+
+  display: flex; /* CSS3 */
+  align-items: center; /* Vertical align */
+  justify-content: center; /* Horizontal align */
+
+}
+nav button.disabled {
+  opacity: 0.8;
+}
+nav input {
+  padding: 10px;
+  box-sizing: border-box;
+  border: none;
+  background: rgba(0,0,100,0.05);
+  outline: none;
+  margin: 10px 0 10px 10px;
+}
+nav button#favorite {
+  background: rgba(0,0,100,0.05);
+  margin: 0;
+  margin-right: 20px;
+  width: auto;
+  height: auto;
+  padding: 10px;
+  border-radius: 0;
+}
+.nomargin {
+  margin: 0 !important;
+}
+.flexible {
+  flex-grow: 1;
+}
+#bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 200000;
+}
+.nanobar {
+  width: 100%;
+  height: 6px;
+  z-index: 20000;
+  top: 0;
+}
+.nanobar .bar {
+  background: #38f;
+  border-radius: 6px;
+  box-shadow: 0 0 10px #59d;
+}
+.status {
+  font-size: 12px;
+  font-weight: bold;
+  padding: 5px 0;
+  color: silver;
+  display: block;
+}
+.status:empty {
+  display: none;
+}
+
+
+.favorites .row {
+  width: 100%;
+}
+
+.settings input[type=range] {
+  width: 100%;
+}
+
+.settings main, .help main, .favorites main {
+  display: block;
+  width: 100%;
+  padding: 50px;
+  box-sizing: border-box;
+}
+.help .rows > * {
+  cursor: pointer;
+}
+.settings main .row, .help main .row, .favorites main .row {
+  padding: 10px 0;
+  font-size: 14px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+.help main .item {
+  border-top: 1px solid rgba(0,0,0,0.05);
+  padding: 10px 0;
+  font-size: 14px;
+  box-sizing: border-box;
+  text-decoration: none;
+  display: block;
+  color: rgba(0,0,0,0.8);
+}
+.settings main .header h2, .help main .header h2, .favorites main .header h2 {
+  text-transform: uppercase;
+}
+.settings main .header, .help main .header, .favorites main .header {
+  display: flex;
+  align-items: center;
+}
+.settings button, .help main .header button, .favorites main .header button {
+  border: none;
+  background: black;
+  border-radius: 2px;
+  color: white;
+  cursor: pointer;
+  padding: 5px 10px;
+  font-weight: bold;
+  margin-right: 5px;
+}
+.settings .del {
+  border: none;
+  background: none;
+  color: black;
+  cursor: pointer;
+}
+
+footer button {
+  border: none;
+  cursor: pointer;
+  padding: 10px;
+  font-weight: bold;
+  font-size: 12px;
+}
+.ds-selected {
+  outline: 3px solid black;
+  outline-offset: 3px;
+}
+footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  border-top: 1px solid rgba(0,0,0,0.1);
+  box-sizing: border-box;
+  z-index: 10000000000;
+  padding: 0 10px;
+  align-items: flex-end;
+}
+footer.empty button {
+  visibility: hidden;
+}
+footer button.disabled {
+  background: gray;
+  color: white;
+}
+footer .tagger {
+  width: 300px;
+  background: rgba(0,0,100,0.1);
+  border: none;
+}
+footer .tagger > ul {
+  padding: 2px 2px 0;
+  font-size: 12px;
+}
+.hidden {
+  display: none!important;
+}
+.tag-item {
+  border: none;
+  background: royalblue;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-right: 5px;
+  cursor: pointer;
+}
+footer .tag-menu-items {
+  border-left: 1px solid rgba(0,0,0,0.1);
+  padding: 10px;
+  box-sizing: border-box;
+}
+footer .tag-menu-items > div {
+  display: flex;
+  margin-bottom: 10px;
+}
+.xmp-header {
+  padding: 5px;
+  box-sizing: border-box;
+}
+.view-xmp {
+  border-radius: 2px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+.xmp textarea {
+  outline: none;
+  margin-top: 10px;
+  border: none;
+  font-family: Menlo, monaco, monospace;
+  padding: 10px;
+  font-size: 12px;
+  box-sizing: border-box;
+  width: 100%;
+  background: rgba(0,0,0,0.9);
+  color: rgba(255,255,255,0.9);
+}
+
+
+footer #cancel-selection {
+  background: none;
+  border: none;
+}
+footer > * {
+  margin: 10px 0;
+  display: block;
+  background: none;
+  border-radius: 0 !important;
+}
+.ts-control {
+  border: none;
+  text-transform: uppercase;
+}
+.ts-wrapper {
+  min-width: 160px;
+  margin: 0;
+}
+.ts-dropdown {
+  text-transform: uppercase;
+}
+
+
+nav #notification {
+  background: firebrick;
+  color: white;
+  border-radius: 50px;
+}
+.notification-popup {
+  font-size: 1.1rem;
+  padding: 10px 20px;
+  box-sizing: border-box;
+}
+.notification-popup h1 {
+  margin: 0 0 10px;
+}
+#get-update {
+  background: royalblue;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 4px;
+  text-decoration: none;
+  display: inline-block;
+  margin: 0 0 10px 0;
+  text-decoration: none;
+}
+.hide {
+  visibility: hidden !important;
+}
+body.default {
+  background: rgba(0,0,100,0.05);
+}
+body.default .settings main .header h2, body.default .help main .header h2, body.default .favorites main .header h2 {
+  margin: 10px 0;
+  border-left: 5px solid black;
+  padding: 0 10px;
+}
+body.default .view-xmp {
+  background: black;
+  color: white;
+  border: none;
+}
+body.default nav {
+  background: white;
+}
+body.default footer {
+  background: white;
+}
+body.default .ds-selected {
+  outline: 3px solid cornflowerblue;
+  outline-offset: 3px;
+}
+/*
+body.default .card .grab:hover {
+  background: royalblue;
+}
+body.default .card.ds-selected .grab {
+  background: royalblue;
+}
+*/
+body.default footer > * {
+  color: black; 
+  border-left: 1px solid #eee;
+}
+body.default footer button {
+  background: none;
+  color: royalblue;
+}
+body.default nav button#favorite.selected {
+  color: royalblue;
+}
+body.default .favorites .row {
+  color: rgba(0, 0, 0, 0.9);
+}
+body.default .favorites .row:hover {
+  color: royalblue;
+}
+body.default nav button:hover {
+  background: rgba(0,0,0,0.04);
+  border-radius: 50px;
+}
+body.default::-webkit-scrollbar {
+  width: 15px;
+}
+body.default::-webkit-scrollbar-track {
+  background: white;
+}
+body.default::-webkit-scrollbar-thumb {
+  background-clip: content-box;
+  background: black;
+}
+body.default select {
+  background: white;
+  color: black;
+}
+body.default options {
+  background: white;
+  padding: 10px;
+  color: black;
+}
+body.default .card h4 {
+  color: rgba(0,0,0,0.9);
+}
+body.default footer button.cancel-selection {
+  color: royalblue;
+}
+body.default .selected-count {
+  color: rgba(0,0,0,0.9);
+}
+body.default .grab button {
+  color: rgba(0,0,0,0.9);
+}
+
+
+/*
+dark theme
+*/
+body.dark .view-xmp {
+  background: black;
+  color: white;
+  border: none;
+}
+
+body.dark .ts-control {
+  background: #111;
+  color:white;
+  border: none;
+  border: none;
+}
+body.dark .settings main .header h2, body.dark .help main .header h2, body.dark .favorites main .header h2 {
+  margin: 10px 0;
+  border-left: 5px solid white;
+  padding: 0 10px;
+}
+body.dark .ts-wrapper:not(.form-control):not(.form-select).single .ts-control {
+  background-color: #111;
+}
+body.dark .ts-dropdown .active {
+  background: #222;
+  color: cornflowerblue;
+}
+body.dark .ts-dropdown {
+  color:white;
+  background: black;
+  border: none;
+}
+body.dark footer > * {
+  color: white;
+  border-left: 1px solid #222;
+}
+body.dark nav button#favorite {
+  background: rgba(255,255,255,0.1);
+}
+body.dark nav button#favorite.selected {
+  color: cornflowerblue;
+}
+body.dark nav {
+  background: #111;
+  color: white;
+}
+body.dark {
+  background: #111;
+}
+body.dark footer {
+  background: #111;
+}
+body.dark footer .tagger {
+  background:rgba(255,255,255,0.1);
+  color: white;
+}
+body.dark .tagger-new input {
+  color: white;
+}
+/*
+body.dark footer button {
+  border: 4px solid rgba(255,255,255,0.1);
+}
+*/
+body.dark .ds-selected {
+  outline: 3px solid cornflowerblue;
+  outline-offset: 3px;
+}
+/*
+body.dark .card .grab:hover {
+  background: cornflowerblue;
+}
+body.dark .card.ds-selected .grab {
+  background: cornflowerblue;
+}
+*/
+body.dark .settings, body.dark .favorites, body.dark .help {
+  color: rgba(255,255,255,0.9);
+}
+body.dark main .item {
+  color: white;
+}
+body.dark .settings .del {
+  color: white;
+}
+body.dark .settings button, body.dark .favorites button {
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.9);
+}
+
+body.dark nav button, body.dark nav .btn, body.dark nav select {
+  background: none;
+  color: white;
+}
+body.dark nav input {
+  background:rgba(255,255,255,0.1);
+  color: white;
+}
+body.dark .card {
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.8);
+}
+body.dark .card td {
+  border-top: 1px solid rgba(255,255,255,0.03);
+}
+body.dark .card .token {
+  color: cornflowerblue;
+}
+body.dark footer button {
+  background: none;
+  color: cornflowerblue;
+}
+body.dark .favorites .row {
+  color: rgba(255,255,255,0.9);
+}
+body.dark .favorites .row:hover {
+  color: cornflowerblue;
+}
+body.dark nav button:hover {
+  background: rgba(255,255,255, 0.04);
+  border-radius: 50px;
+}
+
+body.dark::-webkit-scrollbar {
+  width: 15px;
+}
+body.dark::-webkit-scrollbar-track {
+  background: #111;
+}
+body.dark::-webkit-scrollbar-thumb {
+  background-clip: content-box;
+  background: rgba(255,255,255,0.9);
+}
+body.dark .card h4 {
+  color: rgba(255,255,255,0.9);
+}
+body.dark footer button.cancel-selection {
+  color: cornflowerblue;
+}
+body.dark .selected-count {
+  color: rgba(255,255,255,0.9);
+}
+body.dark .grab button {
+  color: rgba(255,255,255,0.9);
+}
+

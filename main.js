@@ -61,6 +61,11 @@ const updateCheck = async () => {
     }
   }
 }
+const synchronize = () => {
+  mainWindow.webContents.send('msg', {
+    $type: "sync",
+  })
+}
 app.whenReady().then(async () => {
 
 //  session.defaultSession.clearStorageData()   // for testing freshly every time
@@ -78,6 +83,42 @@ app.whenReady().then(async () => {
   server.set('views', path.resolve(__dirname, "views"))
   server.get("/", (req, res) => {
     res.render("index", {
+      platform: process.platform,
+      query: req.query,
+      version: VERSION
+    })
+  })
+  server.get("/settings", (req, res) => {
+    res.render("settings", {
+      platform: process.platform,
+      version: VERSION
+    })
+  })
+  server.get("/favorites", (req, res) => {
+    res.render("favorites", {
+      platform: process.platform,
+      version: VERSION
+    })
+  })
+  server.get("/help", (req, res) => {
+    let items = [{
+      name: "discord",
+      description: "ask questions and share feedback",
+      icon: "fa-brands fa-discord",
+      href: "https://discord.gg/6MJ6MQScnX"
+    }, {
+      name: "twitter",
+      description: "stay updated on Twitter",
+      icon: "fa-brands fa-twitter",
+      href: "https://twitter.com/cocktailpeanut"
+    }, {
+      name: "github",
+      description: "feature requests and bug report",
+      icon: "fa-brands fa-github",
+      href: "https://github.com/cocktailpeanut/breadboard/issues"
+    }]
+    res.render("help", {
+      items,
       platform: process.platform,
       version: VERSION
     })
@@ -234,6 +275,7 @@ app.whenReady().then(async () => {
 
   createWindow(port)
   updateCheck()
+  synchronize()
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow(port)
   })

@@ -1,7 +1,7 @@
 importScripts("./dexie.js")
 var db = new Dexie("breadboard")
 db.version(1).stores({
-  files: "file_path, agent, model_name, root_path, prompt, btime, *tokens",
+  files: "file_path, agent, model_name, root_path, prompt, btime, mtime, *tokens",
   folders: "&name",
   checkpoints: "&root_path, btime",
   settings: "key, val",
@@ -84,6 +84,7 @@ function find (phrase) {
 }
 addEventListener("message", async event => {
   const { query, sorter } = event.data;
+  console.log("query, sorter", query, sorter)
   let res = []
   if (query) {
     res = await find(query, sorter)
@@ -92,6 +93,7 @@ addEventListener("message", async event => {
         res.sort((x, y) => { return x[sorter.column] - y[sorter.column] })
       } else if (sorter.compare === 1) {
         res.sort((x, y) => {
+          console.log(x, y)
           return x[sorter.column].localeCompare(y[sorter.column])
         })
       }
@@ -100,6 +102,7 @@ addEventListener("message", async event => {
         res.sort((x, y) => { return y[sorter.column] - x[sorter.column] })
       } else if (sorter.compare === 1) {
         res.sort((x, y) => {
+          console.log(x, y)
           return y[sorter.column].localeCompare(x[sorter.column])
         })
       }
