@@ -72,7 +72,7 @@ const card = (meta) => {
   </div>
 <img loading='lazy' data-root="${meta.root_path}" data-src="${meta.file_path}" src="/file?file=${encodeURIComponent(meta.file_path)}">
 <div class='col'>
-  <h4 class='flex'>${meta.prompt}</h4>
+  <h4 class='flex'>${meta.prompt ? meta.prompt : ""}</h4>
   <div class='xmp'>
     <div class='card-header'>
       <button class='copy-text' data-value="${meta.prompt}"><i class='fa-regular fa-clone'></i> <span>copy prompt</span></button>
