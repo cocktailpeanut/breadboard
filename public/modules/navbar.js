@@ -80,10 +80,9 @@ class Navbar {
   preprocess_query (phrase) {
     let fp_re = /file_path:"(.+)"/g
     let mn_re = /model_name:"(.+)"/g
-    let tag_re = /tag:"(.+)"/g
+    let tag_re = /tag:"([^"]+)"/g
     let fp_placeholder = "file_path:" + Date.now()
     let mn_placeholder = "model_name:" + Date.now()
-    let tag_placeholder = "tag:" + Date.now()
     let test = fp_re.exec(phrase)
     let fp_captured
     if (test && test.length > 1) {
@@ -97,11 +96,18 @@ class Navbar {
       mn_captured = test[1]
     }
 
-    test = tag_re.exec(phrase)
-    let tag_captured
-    if (test && test.length > 1) {
-      phrase = phrase.replace(tag_re, tag_placeholder)
-      tag_captured = test[1]
+    let tag_captured = {}
+    while(true) {
+      let test = tag_re.exec(phrase)
+      if (test) {
+        console.log("test", test)
+        let captured = test[1]
+        let tag_placeholder = "tag:" + Date.now()
+        phrase = phrase.replace(tag_re, tag_placeholder)
+        tag_captured[tag_placeholder] = captured
+      } else {
+        break;
+      }
     }
 
     let prefixes = phrase.split(" ").filter(x => x && x.length > 0)
@@ -120,8 +126,8 @@ class Navbar {
           converted.push(prefix)
         }
       } else if (prefix.startsWith("tag:")) {
-        if (tag_captured) {
-          converted.push(`tag:"${prefix.replace(/tag:[0-9]+/, tag_captured)}"`)
+        if (tag_captured[prefix]) {
+          converted.push(`tag:"${prefix.replace(/tag:[0-9]+/, tag_captured[prefix])}"`)
         } else {
           converted.push(prefix)
         }
