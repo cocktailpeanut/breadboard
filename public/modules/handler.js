@@ -88,13 +88,15 @@ class Handler {
       } else if (tokenTarget && e.target.closest(".card.expanded")) {
         let key = tokenTarget.closest("tr").getAttribute("data-key")
         let val = tokenTarget.getAttribute("data-value")
-        console.log("key", key)
         if (key === "file_path" || key === "model_name") {
           val = `"${val}"`
         }
         this.app.navbar.input(key, val)
       } else if (tagTarget && e.target.closest(".card.expanded")) {
         let tag = tagTarget.getAttribute("data-tag")
+        if (tag.split(" ").length > 1) {
+          tag = `tag:"${tag.replace('tag:', '')}"`
+        }
         this.app.navbar.input("prompt", tag)
       } else if (displayMetaTarget) {
         let file_path = displayMetaTarget.getAttribute("data-src")

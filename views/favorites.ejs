@@ -53,7 +53,7 @@
     const renderFavorites = async () => {
       let res = await db.favorites.toArray()
       let rows = res.map((r) => {
-        return `<a class='row' href="/?query=${r.query}"><i class="fa-solid fa-star"></i>&nbsp;${r.query}</a>`
+        return `<a class='row' href="/?query=${encodeURIComponent(r.query)}"><i class="fa-solid fa-star"></i>&nbsp;${r.query}</a>`
       }).join("")
 
       document.querySelector(".favorites").innerHTML = `<main>

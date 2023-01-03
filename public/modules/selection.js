@@ -5,14 +5,14 @@ class Selection {
     this.addTagInput = document.querySelector('#add-tag-field')
     this.addtags = tagger(this.addTagInput, {
       allow_duplicates: false,
-      allow_spaces: false,
+//      allow_spaces: false,
       add_on_blur: true,
       wrap: true,
     });
     this.removeTagInput = document.querySelector('#remove-tag-field')
     this.removetags = tagger(this.removeTagInput, {
       allow_duplicates: false,
-      allow_spaces: false,
+//      allow_spaces: false,
       add_on_blur: true,
       wrap: true,
     });
@@ -168,7 +168,11 @@ class Selection {
         ]
       })
       let items = tags.map((x) => {
-        return "tag:" + x
+        if (x.split(" ").length > 1) {
+          return `tag:"${x}"`
+        } else {
+          return "tag:" + x
+        }
       })
       let paths = this.els.map((el) => {
         return {
