@@ -18,7 +18,7 @@ class Selection {
     });
 //    this.init()
 
-    hotkeys("shift+left,shift+up", function(e) {
+    hotkeys("shift+left,shift+up", (e) => {
       if (this.els && this.els.length > 0) {
         let prev = this.els[0].previousSibling
         if (prev) {
@@ -31,7 +31,7 @@ class Selection {
         }
       }
     })
-    hotkeys("shift+right,shift+down", function(e) {
+    hotkeys("shift+right,shift+down", (e) => {
       if (this.els && this.els.length > 0) {
         let next = this.els[this.els.length-1].nextSibling
         if (next) {
@@ -44,7 +44,7 @@ class Selection {
         }
       }
     })
-    hotkeys("left,up", function(e) {
+    hotkeys("left,up", (e) => {
       if (this.els && this.els.length > 0) {
         let prev = this.els[0].previousSibling
         if (prev) {
@@ -57,7 +57,7 @@ class Selection {
         }
       }
     })
-    hotkeys("right,down", function(e) {
+    hotkeys("right,down", (e) => {
       if (this.els && this.els.length > 0) {
         let next = this.els[this.els.length-1].nextSibling
         if (next) {
@@ -70,10 +70,10 @@ class Selection {
         }
       }
     })
-    hotkeys("delete,backspace", async function(e) {
+    hotkeys("delete,backspace", async (e) => {
       await this.del()
     })
-    hotkeys("escape", function(e) {
+    hotkeys("escape", (e) => {
       for(let el of this.els) {
         el.classList.remove("expanded")
         el.classList.remove("fullscreen")
@@ -82,7 +82,7 @@ class Selection {
       this.ds.setSelection(this.els)
       this.update(this.els)
     })
-    hotkeys("enter", function(e) {
+    hotkeys("enter", (e) => {
       if (this.els && this.els.length > 0) {
         let target = this.els[0]
         if (target) {
@@ -143,9 +143,9 @@ class Selection {
         document.querySelector(".status").innerHTML = ""
         let query = document.querySelector(".search").value
         if (query && query.length > 0) {
-          await search(query)
+          await this.app.search(query)
         } else {
-          await search()
+          await this.app.search()
         }
         bar.go(100)
       })
@@ -198,22 +198,24 @@ class Selection {
     })
   }
   init () {
-    this.ds = new DragSelect({
-      selectables: document.querySelectorAll('.card'),
-      area: document.querySelector(".content"),
-      draggability: false,
-    });
-    this.ds.subscribe('callback', async (e) => {
-      console.log("e", e)
-      console.log("callback", e.items)
-      if (e.items && e.items.length > 0) {
-        // reset tags
-        this.update(e.items)
-      } else {
-        this.els = []
-        document.querySelector("footer").classList.add("hidden")
-      }
-    });
+    if (!this.ds) {
+      this.ds = new DragSelect({
+        selectables: document.querySelectorAll('.card'),
+        area: document.querySelector(".content"),
+        draggability: false,
+      });
+      this.ds.subscribe('callback', async (e) => {
+        console.log("e", e)
+        console.log("callback", e.items)
+        if (e.items && e.items.length > 0) {
+          // reset tags
+          this.update(e.items)
+        } else {
+          this.els = []
+          document.querySelector("footer").classList.add("hidden")
+        }
+      });
+    }
   }
   async del() {
     let selected = this.els.map((el) => {

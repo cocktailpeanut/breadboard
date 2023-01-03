@@ -27,8 +27,12 @@ const card = (meta) => {
       el = `<span class='token' data-value="${attr.val}">${attr.val}</span>`
     } else if (attr.key === "agent" && attr.val) {
       el = `<span class='token' data-value="${attr.val}">${attr.val}</span>`
-    } else if (attr.key === "tokens" && attr.val && attr.val.length > 0) {
-      let els = attr.val.filter((x) => {
+    } else if (attr.key === "tokens") {
+      let val = []
+      if (attr.val && attr.val.length > 0) {
+        val = attr.val
+      }
+      let els = val.filter((x) => {
         return x.startsWith("tag:")
       }).map((x) => {
         return `<span data-tag="${x}">
@@ -70,7 +74,8 @@ const card = (meta) => {
 <div class='col'>
   <h4 class='flex'>${meta.prompt}</h4>
   <div class='xmp'>
-    <div class='xmp-header'>
+    <div class='card-header'>
+      <button class='copy-text' data-value="${meta.prompt}"><i class='fa-regular fa-clone'></i> <span>copy prompt</span></button>
       <button class='view-xmp' data-src="${meta.file_path}"><i class="fa-solid fa-code"></i> View XML</button>
     </div>
     <textarea readonly class='hidden slot'></textarea>

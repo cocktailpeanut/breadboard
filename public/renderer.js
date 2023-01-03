@@ -1,18 +1,46 @@
 class App {
-  constructor (query, sync, sorter_code) {
+  constructor (query, sorter_code, need_update, sync_mode) {
     this.init_rpc()
     this.query = query
     this.sorter_code = sorter_code
-    this.sync_mode = sync
+    this.sync_mode = sync_mode
     this.checkpoints = { }
     this.selection = new Selection(this)
     this.navbar = new Navbar(this);
+    if (need_update) {
+      this.navbar.notification(need_update)
+    }
     this.handler = new Handler(this);
-    this.bar = new Nanobar({
-      //target: document.querySelector(".container")
-      //target: document.querySelector("body")
-      target: document.querySelector("#bar")
-    });
+    if (!this.bar) {
+      this.bar = new Nanobar({
+        target: document.querySelector("#bar")
+      });
+    }
+  }
+  async clear_db() {
+    // TODO => Must switch to only clearing files and checkpoints in the next release
+    await this.db.delete()    // only for this version => from next version will be upgraded
+
+    //await this.db.files.clear()
+    //await this.db.checkpoints.clear()
+  }
+  async bootstrap (options) {
+
+    // fresh bootstrap => clear DB
+    if (options && options.fresh) {
+      await this.clear_db()
+      await this.init_db()
+      await this.bootstrap_db()
+    }
+
+    await this.init_theme()
+    await this.init_zoom()
+    this.init_worker()
+    if (this.sync_mode === "default" || this.sync_mode === "reindex") {
+      await this.synchronize()
+    } else {
+      await this.draw()
+    }
   }
   async init () {
     console.log("INIT", VERSION)
@@ -25,57 +53,28 @@ class App {
     try {
       let current_version = await this.db.settings.where({ key: "version" }).first()
       if (current_version.val === VERSION) {
-        await this.init_theme()
-        await this.init_zoom()
-        this.init_worker()
-        if (this.sync_mode === "true" || this.sync_mode === "reindex") {
-          await this.synchronize()
-        } else {
-          await this.draw()
-        }
+        // Normal situation
+        await this.bootstrap()
       } else {
-
-//        await this.db.files.clear()
-//        await this.db.checkpoints.clear()
-        await this.db.delete()    // only for this version => from next version will be upgraded
-
-
-
-        await this.init_db()
-        await this.bootstrap_db()
-        await this.init_theme()
-        await this.init_zoom()
-        this.init_worker()
-        if (this.sync_mode === "true" || this.sync_mode === "reindex") {
-          await this.synchronize()
-        } else {
-          await this.draw()
-        }
+        // The current app version and the existing DB version doesn't match
+        // which means the app (with a new version) has been freshly installed 
+        // therefore re-index everything
+        await this.bootstrap({ fresh: true })
       }
     } catch (e) {
-//      await this.db.files.clear()
-//      await this.db.checkpoints.clear()
-      await this.db.delete()
-      await this.init_db()
-      await this.bootstrap_db()
-      await this.init_theme()
-      await this.init_zoom()
-      this.init_worker()
-      if (this.sync_mode === "true" || this.sync_mode === "reindex") {
-        await this.synchronize()
-      } else {
-        await this.draw()
-      }
+      // VERSION does not exist => (only in the first version)
+      // Treat the same way as DB version not matching 
+      await this.bootstrap({ fresh: true })
     }
   }
   async insert (o) {
     let tokens = []
     let wordSet = {}
     if (o.prompt && typeof o.prompt === 'string' && o.prompt.length > 0) {
-      wordSet = o.prompt.split(' ')
-      .map((x) => {
-        return this.stripPunctuation(x)
-      })
+      wordSet = this.stripPunctuation(o.prompt).split(' ')
+//      .map((x) => {
+//        return this.stripPunctuation(x)
+//      })
       .reduce(function (prev, current) {
         if (current.length > 0) prev[current] = true;
         return prev;
@@ -115,26 +114,21 @@ class App {
     this.checkpoints[root_path] = btime
   }
   init_rpc() {
+    console.log("init_rpc")
     window.electronAPI.onMsg(async (_event, value) => {
-      if (value.$type === "synchronize") {
-        await this.synchronize()
-      } else if (value.$type === "update") {
-        this.navbar.notification(value)
-      } else {
-        queueMicrotask(async () => {
-          if (value.meta) {
-            let response = await this.insert(value.meta).catch((e) => {
-              console.log("ERROR", e)
-            })
-          }
-          this.sync_counter++;
-          if (this.sync_counter === value.total) {
-            this.sync_complete = true
-          }
-          let ratio = value.progress/value.total
-          this.bar.go(100*value.progress/value.total);
-        })
-      }
+      queueMicrotask(async () => {
+        if (value.meta) {
+          let response = await this.insert(value.meta).catch((e) => {
+            console.log("ERROR", e)
+          })
+        }
+        this.sync_counter++;
+        if (this.sync_counter === value.total) {
+          this.sync_complete = true
+        }
+        let ratio = value.progress/value.total
+        this.bar.go(100*value.progress/value.total);
+      })
     })
   }
   async init_db () {
@@ -192,17 +186,20 @@ class App {
     this.theme = await this.db.settings.where({ key: "theme" }).first()
     if (!this.theme) this.theme = { val: "default" }
     document.body.className = this.theme.val
+    window.electronAPI.theme(this.theme.val)
   }
   init_worker () {
-    this.worker = new Worker("./worker.js")
-    this.worker.onmessage = async (e) => {
-      await this.fill(e.data)
-      setTimeout(() => {
-        document.querySelector("#sync").classList.remove("disabled")
-        document.querySelector("#sync").disabled = false
-        document.querySelector("#sync i").classList.remove("fa-spin")
-        this.selection.init()
-      }, 0)
+    if (!this.worker) {
+      this.worker = new Worker("./worker.js")
+      this.worker.onmessage = async (e) => {
+        await this.fill(e.data)
+        setTimeout(() => {
+          document.querySelector("#sync").classList.remove("disabled")
+          document.querySelector("#sync").disabled = false
+          document.querySelector("#sync i").classList.remove("fa-spin")
+          this.selection.init()
+        }, 0)
+      }
     }
   }
   async synchronize (paths, cb) {
@@ -227,11 +224,9 @@ class App {
       }
     } else {
       let folderpaths = await this.db.folders.toArray()
-      console.log("folderpaths", folderpaths)
       for(let folderpath of folderpaths) {
         let root_path = folderpath.name
         let c = await this.checkpoint(root_path)
-        console.log("c", c)
         document.querySelector(".status").innerHTML = "synchronizing from " + root_path
         this.sync_counter = 0
         this.sync_complete = false
@@ -245,7 +240,6 @@ class App {
           } else if (this.sync_mode === "reindex") {
             config.force = true
           }
-          console.log("config", config)
           window.electronAPI.sync(config)
           let interval = setInterval(() => {
             if (this.sync_complete) {
@@ -257,6 +251,7 @@ class App {
       }
       this.sync_counter = 0
       document.querySelector(".status").innerHTML = ""
+      console.log("DONE")
       this.bar.go(100)
       let query = document.querySelector(".search").value
       if (query && query.length > 0) {
@@ -265,10 +260,8 @@ class App {
         await this.search()
       }
     }
-  //  await render()
   }
   async fill (items) {
-    console.time("fill")
     const chunkSize = 800;
     document.querySelector(".container").classList.remove("hidden")
     document.querySelector(".status").innerHTML = "Loading..."
@@ -284,7 +277,6 @@ class App {
     });
     document.querySelector(".status").innerHTML = ""
     document.querySelector(".loading").classList.add("hidden")
-    console.timeEnd("fill")
   }
   async draw () {
     document.querySelector(".loading").classList.remove("hidden")
@@ -307,20 +299,26 @@ class App {
     this.worker.postMessage({ query: this.query, sorter: this.navbar.sorter })
   }
   async search (query, silent) {
-    console.log("this.sorter_code", this.sorter_code)
-    debugger
-    let params = (this.sorter_code ? new URLSearchParams({ sorter_code: this.sorter_code }) : new URLSearchParams())
+    let params = new URLSearchParams({ sorter_code: this.sorter_code })
     if (query && query.length > 0) {
       params.set("query", query)
     }
     location.href = "/?" + params.toString()
   }
   stripPunctuation (str) {
-    return str.replace(/(^[^\p{L}\s]|[^\p{L}\s]$)/gu,"")
+//    return str.replace(/(^[^\p{L}\s]|[^\p{L}\s]$)/gu,"")
+    return str.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()+]/g, "").replace(/\s{2,}/g, " ");
   }
 
 }
-const app = new App(QUERY, SYNC, SORTER);
+
+let QUERY
+if (document.querySelector("#query")) {
+  QUERY = document.querySelector("#query").getAttribute("data-value")
+}
+console.log("QUERY", QUERY)
+
+const app = new App(QUERY, SORTER, NEED_UPDATE, SYNC_MODE);
 (async () => {
   await app.init()
 })();

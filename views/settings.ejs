@@ -17,7 +17,6 @@
       <button id='prev'><i class="fa-solid fa-chevron-left"></i></button>
       <button id='next'><i class="fa-solid fa-chevron-right"></i></button>
       <a class='btn' href="/favorites"><i class="fa-solid fa-star"></i></a>
-      <button id="sync"><i class="fa-solid fa-rotate"></i></button>
       <div class='status'></div>
       <input type='search' placeholder='search' class='search flexible'>
       <a class='btn' href="/help"><i class="fa-solid fa-question"></i></a>
@@ -43,6 +42,7 @@
       let theme = await db.settings.where({ key: "theme" }).first()
       if (!theme) theme = { val: "default" }
       document.body.className = theme.val
+      window.electronAPI.theme(theme.val)
     }
     const search = (query) => {
       if (query && query.length > 0) {
@@ -116,27 +116,27 @@
         </div>
       </div>
     </main>`
-      document.querySelector("input[type=range]").addEventListener("change", async (e) => {
-        window.electronAPI.zoom(e.target.value)
-        await db.settings.put({ key: "zoom", val: e.target.value })
-        e.target.closest(".rows").querySelector(".currentZoom").innerHTML = "" + e.target.value + "%"
-      })
-      document.querySelector("#reindex").addEventListener("click", async () => {
-        // reset the indexedDB
-
-//        await db.files.clear()
-//        await db.checkpoints.clear()
-        await db.delete()    // only for this version => from next version will be upgraded
-
-
+      const reindex = async () => {
+        await db.files.clear()
+        await db.checkpoints.clear()
 
         location.href = "/?synchronize=reindex"
+        // reset the indexedDB
+
         /*
         // force synchronize
         forceSynchronize = true
         await synchronize()
         forceSynchronize = false
         */
+      }
+      document.querySelector("input[type=range]").addEventListener("change", async (e) => {
+        window.electronAPI.zoom(e.target.value)
+        await db.settings.put({ key: "zoom", val: e.target.value })
+        e.target.closest(".rows").querySelector(".currentZoom").innerHTML = "" + e.target.value + "%"
+      })
+      document.querySelector("#reindex").addEventListener("click", async () => {
+        await reindex()
       })
       document.querySelector("#select").addEventListener('click', async () => {
         let paths = await window.electronAPI.select()
@@ -145,18 +145,25 @@
         }
         await renderSettings()
         setTimeout(async () => {
-//          await synchronize()
-          location.href = "/?synchronize=true"
+          location.href = "/?synchronize=default"
         }, 1000)
       })
-      document.querySelector(".settings .rows").addEventListener("click", async (e) => {
+      document.querySelector(".settings").addEventListener("click", async (e) => {
         e.preventDefault()
         e.stopPropagation()
         let target = (e.target.classList.contains("del") ? e.target : e.target.closest(".del"))
+        console.log("target", target)
         if (target) {
-          let name = target.getAttribute("data-name")
-          await db.folders.where({ name }).delete()
-          await renderSettings()
+          const confirmed = confirm("disconnect the folder?")
+          if (confirmed) {
+            let name = target.getAttribute("data-name")
+            console.log("name", name)
+            await db.folders.where({ name }).delete()
+            await renderSettings()
+            setTimeout(async () => {
+              await reindex()
+            }, 0)
+          }
         }
       })
       document.querySelector("#dark-theme").addEventListener('click', async () => {

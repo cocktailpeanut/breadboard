@@ -7,6 +7,11 @@ db.version(1).stores({
   settings: "key, val",
   favorites: "query"
 })
+const esc = (str) => {
+  return str
+		.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&')
+		.replace(/-/g, '\\x2d');
+}
 function applyFilter(q, filters) {
   if (filters.length > 0) {
     for(let filter of filters) {
@@ -16,7 +21,7 @@ function applyFilter(q, filters) {
         q = q.and("btime").aboveOrEqual(new Date(filter.after).getTime())
       } else if (filter.model_name) {
         q = q.and((item) => {
-          return new RegExp(filter.model_name, "i").test(item.model_name)
+          return new RegExp(esc(filter.model_name), "i").test(item.model_name)
         })
       } else if (filter.agent) {
         //q = q.and("agent").startsWithIgnoreCase(filter.agent)
@@ -25,16 +30,66 @@ function applyFilter(q, filters) {
         })
       } else if (filter.file_path) {
         q = q.and((item) => {
-          return new RegExp(filter.file_path, "i").test(item.file_path)
+          return new RegExp(esc(filter.file_path), "i").test(item.file_path)
         })
       }
     }
   }
   return q.primaryKeys()
 }
-function find (phrase) {
-  let prefixes = phrase.split(" ").filter(x => x && x.length > 0)
 
+const preprocess_query = (phrase) => {
+  let fp_re = /file_path:"(.+)"/g
+  let mn_re = /model_name:"(.+)"/g
+  let fp_placeholder = "file_path:" + Date.now()
+  let mn_placeholder = "model_name:" + Date.now()
+  let test = fp_re.exec(phrase)
+  let fp_captured
+  if (test && test.length > 1) {
+    phrase = phrase.replace(fp_re, fp_placeholder)
+    fp_captured = test[1]
+  }
+  test = mn_re.exec(phrase)
+  let mn_captured
+  if (test && test.length > 1) {
+    phrase = phrase.replace(mn_re, mn_placeholder)
+    mn_captured = test[1]
+  }
+  let prefixes = phrase.split(" ").filter(x => x && x.length > 0)
+  const converted = []
+  for (let prefix of prefixes) {
+    if (prefix.startsWith("model_name:")) {
+      if (mn_captured) {
+        converted.push("model_name:" + prefix.replace(/model_name:[0-9]+/, mn_captured))
+      } else {
+        converted.push(prefix)
+      }
+    } else if (prefix.startsWith("file_path:")) {
+      if (fp_captured) {
+        converted.push("file_path:" + prefix.replace(/file_path:[0-9]+/, fp_captured))
+      } else {
+        converted.push(prefix)
+      }
+    } else {
+      converted.push(prefix)
+    }
+  }
+  return converted
+}
+
+function find (phrase) {
+
+  // replace all 
+  // file_path:".*"
+  // model_name:".*"
+  // with 
+  // file_path:Date.now()
+  // model_name:Date.now()
+
+  // run the split
+  // replace the pattern after the split
+
+  let prefixes = preprocess_query(phrase)
   let tokens = []
   let filters = []
   for(let prefix of prefixes) {
@@ -62,6 +117,7 @@ function find (phrase) {
       tokens.push(prefix)
     }
   }
+  console.log("filters", filters)
 
   return db.transaction('r', db.files, function*() {
     let promises

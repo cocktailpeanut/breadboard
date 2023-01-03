@@ -17,11 +17,11 @@ class Navbar {
       column: "btime",
       compare: 0, // numeric compare
     }, {
-      direction: 1,
+      direction: -1,
       column: "mtime",
       compare: 0, // alphabetical compare
     }, {
-      direction: -1,
+      direction: 1,
       column: "mtime",
       compare: 0, // alphabetical compare
     }, {
@@ -33,10 +33,8 @@ class Navbar {
       column: "prompt",
       compare: 1, // alphabetical compare
     }]
-    console.log("sortercode", this.app.sorter_code)
-    this.sorter = (this.app.sorter_code ? this.sorters[this.app.sorter_code] : this.sorters[0])
-    this.sorter_code = parseInt(this.app.sorter_code ? this.app.sorter_code : 0)
-    console.log("sorter", this.sorter)
+    this.sorter = this.sorters[this.app.sorter_code]
+    this.sorter_code = parseInt(this.app.sorter_code)
 //    this.debouncedSearch = debounce(this.app.search)
     document.querySelector("#prev").addEventListener("click", (e) => {
       history.back()
@@ -79,10 +77,49 @@ class Navbar {
     })
 
   }
+  preprocess_query (phrase) {
+    let fp_re = /file_path:"(.+)"/g
+    let mn_re = /model_name:"(.+)"/g
+    let fp_placeholder = "file_path:" + Date.now()
+    let mn_placeholder = "model_name:" + Date.now()
+    let test = fp_re.exec(phrase)
+    let fp_captured
+    if (test && test.length > 1) {
+      phrase = phrase.replace(fp_re, fp_placeholder)
+      fp_captured = test[1]
+    }
+    test = mn_re.exec(phrase)
+    let mn_captured
+    if (test && test.length > 1) {
+      phrase = phrase.replace(mn_re, mn_placeholder)
+      mn_captured = test[1]
+    }
+    let prefixes = phrase.split(" ").filter(x => x && x.length > 0)
+    const converted = []
+    for (let prefix of prefixes) {
+      if (prefix.startsWith("model_name:")) {
+        if (mn_captured) {
+          converted.push("model_name:" + prefix.replace(/model_name:[0-9]+/, mn_captured))
+        } else {
+          converted.push(prefix)
+        }
+      } else if (prefix.startsWith("file_path:")) {
+        if (fp_captured) {
+          converted.push("file_path:" + prefix.replace(/file_path:[0-9]+/, fp_captured))
+        } else {
+          converted.push(prefix)
+        }
+      } else {
+        converted.push(prefix)
+      }
+    }
+    return converted
+  }
   input (key, val) {
     // find the key in query
     let query = document.querySelector(".search").value
-    let t = query.split(" ").filter(x => x.length > 0)
+
+    let t = this.preprocess_query(query)
 
     // find prompt search tokens (no :)
     let existingPromptTokens = []
@@ -164,11 +201,12 @@ class Navbar {
     el.classList.remove("hidden")
     tippy(el, {
       interactive: true,
+      placement: "bottom-end",
       trigger: 'click',
       content: `<div class='notification-popup'>
+  <div><a href='${value.$url}' id='get-update' target="_blank">Get update</a></div>
   <h2>${value.latest.title}</h2>
   <div>${value.latest.content}</div>
-  <div><a href='${value.$url}' id='get-update' target="_blank">Get update</a></div>
 </div>`,
       allowHTML: true,
     });

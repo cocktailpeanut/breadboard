@@ -26,12 +26,12 @@
       <button id='favorite'><i class="fa-regular fa-star"></i></button>
       <i class="nomargin fa-solid fa-arrow-down-wide-short"></i>
       <select>
-        <option value='1'>create time (↓)</option>
-        <option value='2'>create time (↑)</option>
-        <option value='3'>update time (↓)</option>
-        <option value='4'>update time (↑)</option>
-        <option value='5'>prompt (a-z)</option>
-        <option value='6'>prompt (z-a)</option>
+        <option value='0'>created time (↓)</option>
+        <option value='1'>created time (↑)</option>
+        <option value='2'>updated time (↓)</option>
+        <option value='3'>updated time (↑)</option>
+        <option value='4'>prompt (a-z)</option>
+        <option value='5'>prompt (z-a)</option>
       </select>
       <a class='btn' href="/help"><i class="fa-solid fa-question"></i></a>
       <a class='btn' href="/settings"><i class="fa-solid fa-gear"></i></a>
@@ -76,16 +76,20 @@
       <div class='flexible'></div>
       <button id='cancel-selection'><i class="fa-solid fa-x"></i></button>
     </footer>
+    <% if (query) { %>
+    <div id='query' class='hidden' data-value="<%=query.query%>"></div>
+    <% } %>
     <script>
       const VERSION = "<%=version%>"
-      <% if (query) { %>
-        const QUERY = "<%=query.query%>"
-        const SYNC = "<%=query.synchronize ? query.synchronize : 'false'%>"
-        const SORTER = <%= query.sorter_code ? query.sorter_code : 0%>
-        document.querySelector("select option[value='<%=query.sorter_code ? query.sorter_code : 1%>']").setAttribute("selected", "selected")
+      const SORTER = <%=current_sorter_code%>
+      <% if (need_update) { %>
+        var NEED_UPDATE = <%-JSON.stringify(need_update)%>
+      <% } else { %>
+        var NEED_UPDATE = null
       <% } %>
+      var SYNC_MODE = "<%=sync_mode%>"
+      document.querySelector("select option[value='<%=current_sorter_code%>']").setAttribute("selected", "selected")
     </script>
-    <script src="./lazyload.js"></script>
     <script src="./viewer.js"></script>
     <script src="./select.js"></script>
     <script src='./popper.js'></script>

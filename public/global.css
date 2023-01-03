@@ -41,7 +41,7 @@ body {
   */
   box-sizing: border-box;
   align-items: flex-start;
-  margin: 10px;
+  margin: 15px;
 
   overflow-wrap: break-word;
   word-wrap: break-word;
@@ -249,8 +249,8 @@ body {
 .card .fa-heart.fa-solid {
   color: red;
 }
-nav button, nav .status, nav input, footer button {
-  -webkit-app-region: no-drag;
+nav > * {
+  -webkit-app-region: no-drag !important;
   cursor: auto;
 }
 td .attribute {
@@ -277,9 +277,14 @@ tr button.copy-text, tr button.edit-tags, tr button.open-file {
   border: 1px solid rgba(0,0,0,0.1);
   cursor: pointer;
 }
+nav {
+  padding: 32px 10px 5px;
+}
+/*
 nav.darwin {
   padding: 30px 10px 5px;
 }
+*/
 nav {
   -webkit-app-region: drag;
   position: -webkit-sticky;
@@ -495,11 +500,11 @@ footer .tag-menu-items > div {
   display: flex;
   margin-bottom: 10px;
 }
-.xmp-header {
+.card-header {
   padding: 5px;
   box-sizing: border-box;
 }
-.view-xmp {
+.card-header button {
   border-radius: 2px;
   padding: 5px 10px;
   cursor: pointer;
@@ -539,8 +544,6 @@ footer > * {
 .ts-dropdown {
   text-transform: uppercase;
 }
-
-
 nav #notification {
   background: firebrick;
   color: white;
@@ -550,6 +553,12 @@ nav #notification {
   font-size: 1.1rem;
   padding: 10px 20px;
   box-sizing: border-box;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  -ms-word-break: break-all;
+  word-break: break-word;
+  height: 500px;
+  overflow: auto;
 }
 .notification-popup h1 {
   margin: 0 0 10px;
@@ -561,7 +570,7 @@ nav #notification {
   border-radius: 4px;
   text-decoration: none;
   display: inline-block;
-  margin: 0 0 10px 0;
+  margin: 10px 0 0 0;
   text-decoration: none;
 }
 .hide {
@@ -575,7 +584,7 @@ body.default .settings main .header h2, body.default .help main .header h2, body
   border-left: 5px solid black;
   padding: 0 10px;
 }
-body.default .view-xmp {
+body.default .card-header button {
   background: black;
   color: white;
   border: none;
@@ -650,12 +659,15 @@ body.default .selected-count {
 body.default .grab button {
   color: rgba(0,0,0,0.9);
 }
+body.default .notification-popup a {
+  color: royalblue;
+}
 
 
 /*
 dark theme
 */
-body.dark .view-xmp {
+body.dark .card-header button {
   background: black;
   color: white;
   border: none;
@@ -797,4 +809,9 @@ body.dark .selected-count {
 body.dark .grab button {
   color: rgba(255,255,255,0.9);
 }
-
+body.dark .loading {
+  color: rgba(255,255,255,0.9);
+}
+body.dark .notification-popup a {
+  color: white;
+}

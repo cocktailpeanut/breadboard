@@ -44,5 +44,8 @@ contextBridge.exposeInMainWorld('electronAPI',{
   },
   docs: () => {
     ipcRenderer.invoke("docs")
+  },
+  theme: (val) => {
+    ipcRenderer.invoke("theme", val)
   }
 })

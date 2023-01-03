@@ -19,20 +19,26 @@ class GM {
   ****************************************************************************/
   async set (filepath, new_items) {
     if (Array.isArray(filepath)) {
-      let r = await Promise.all(filepath.map((p) => {
+      let r = await Promise.allSettled(filepath.map((p) => {
         return this.setOne(p, new_items)
       }))
       return r
     } else {
-      let r = await this.setOne(filepath, new_items)
+      let r = await Promise.allSettled([
+        this.setOne(filepath, new_items)
+      ])
       return r
     }
   }
   async setOne(filepath, new_items) {
     const buf = await fs.promises.readFile(filepath)
     const info = await this._get(buf)
-    const r = await this._set(filepath, info, new_items)
-    return r
+    if (info.list) {
+      const r = await this._set(filepath, info, new_items)
+      return r
+    } else {
+      throw new Error("invalid file")
+    }
   }
   _normalize(items) {
     let keys = [
@@ -87,12 +93,14 @@ class GM {
   ****************************************************************************/
   async rm (filepath, keys) {
     if (Array.isArray(filepath)) {
-      let r = await Promise.all(filepath.map((p) => {
+      let r = await Promise.allSettled(filepath.map((p) => {
         return this.rmOne(p, keys)
       }))
       return r
     } else {
-      let r = await this.rmOne(filepath, keys)
+      let r = await Promise.allSettled([
+        this.rmOne(filepath, keys)
+      ])
       return r
     }
   }

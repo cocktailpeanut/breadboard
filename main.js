@@ -17,18 +17,42 @@ const is_mac = process.platform.startsWith("darwin")
 contextMenu({ showSaveImageAs: true });
 var mainWindow;
 const updater = new Updater()
+const titleBarOverlay = (theme) => {
+  if (is_mac) {
+    return false
+  } else {
+    if (theme === "dark") {
+      return {
+        color: "#111",
+        symbolColor: "white"
+      }
+    } else if (theme === "default") {
+      return {
+        color: "white",
+        symbolColor: "black"
+      }
+    }
+    return {
+      color: "white",
+      symbolColor: "black"
+    }
+  }
+}
 function createWindow (port) {
   mainWindow = new BrowserWindow({
-		titleBarStyle : (is_mac ? "hidden" : "default"),
-		titleBarOverlay : !is_mac,
+		//titleBarStyle : (is_mac ? "hidden" : "default"),
+		titleBarStyle : "hidden",
+		//titleBarOverlay : !is_mac,
+//    titleBarOverlay: false,
+		titleBarOverlay : titleBarOverlay(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
     },
   })
+//  mainWindow.webContents.openDevTools()
   mainWindow.loadURL(`http://localhost:${port}`)
   mainWindow.maximize();
 
-//  mainWindow.webContents.openDevTools()
 
 
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -38,6 +62,11 @@ function createWindow (port) {
     return { action: 'deny' };
   });
 }
+var need_update = null
+var default_sync_mode = "default"    // only synchronize once at launch
+var current_sorter_code = 0
+
+
 const VERSION = app.getVersion()
 console.log("VERSION", VERSION)
 
@@ -53,20 +82,15 @@ const updateCheck = async () => {
       console.log("UP TO DATE", latest.title, VERSION)
     } else {
       console.log("Need to update to", latest)
-      mainWindow.webContents.send('msg', {
-        $type: "update",
+      need_update = {
         $url: releaseURL,
         latest
-      })
+      }
     }
   }
 }
-const synchronize = () => {
-  mainWindow.webContents.send('msg', {
-    $type: "sync",
-  })
-}
 app.whenReady().then(async () => {
+  await updateCheck()
 
 //  session.defaultSession.clearStorageData()   // for testing freshly every time
   const port = await new Promise((resolve, reject) => {
@@ -81,12 +105,22 @@ app.whenReady().then(async () => {
   server.use("/docs", express.static(path.resolve(__dirname, 'docs')))
   server.set('view engine', 'ejs');
   server.set('views', path.resolve(__dirname, "views"))
-  server.get("/", (req, res) => {
+  server.get("/", async (req, res) => {
+    let sync_mode = (req.query.synchronize ? req.query.synchronize : default_sync_mode)
+    if (req.query && req.query.sorter_code) {
+      current_sorter_code = req.query.sorter_code
+    }
+    console.log("current_sorter", current_sorter_code)
+    console.log("query", req.query)
     res.render("index", {
       platform: process.platform,
       query: req.query,
-      version: VERSION
+      version: VERSION,
+      sync_mode,
+      need_update,
+      current_sorter_code
     })
+    if (default_sync_mode) default_sync_mode = false   // disable sync after the first time at launch
   })
   server.get("/settings", (req, res) => {
     res.render("settings", {
@@ -220,6 +254,11 @@ app.whenReady().then(async () => {
       }
     }
   })
+  ipcMain.handle("theme", (event, theme) => {
+    if (mainWindow.setTitleBarOverlay) {
+      mainWindow.setTitleBarOverlay(titleBarOverlay(theme))
+    }
+  })
   ipcMain.handle('del', async (event, filenames) => {
     for(filename of filenames) {
       console.log("deleting", filename)
@@ -274,8 +313,7 @@ app.whenReady().then(async () => {
   })
 
   createWindow(port)
-  updateCheck()
-  synchronize()
+//  synchronize()
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow(port)
   })
