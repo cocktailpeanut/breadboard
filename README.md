@@ -51,7 +51,7 @@ Designed with extensibility in mind, and can support other formats in the future
 
 # Questions and Feedback
 
-- **Questions:** Join the Discord channel to ask questions https://discord.gg/dZywHttS
+- **Questions:** Join the Discord channel to ask questions https://discord.gg/6MJ6MQScnX
 - **News and updates:** Follow the creator on Twitter to stay updated https://twitter.com/cocktailpeanut
 - **Requests reports:** Open an issue on Github to share feature requests and bug reports https://github.com/cocktailpeanut/breadboard/issues
 
