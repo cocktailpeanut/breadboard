@@ -42,12 +42,16 @@ const card = (meta) => {
       el = els.join("")
       attr.key = "tags"
     } else if (attr.key === "prompt" && attr.val) {
-      let tokens = attr.val.split(" ").filter(x => x.length > 0)
-      let els = []
-      for(let token of tokens) {
-        els.push(`<span class='token' data-value="${token}">${token}</span>`)
+      if (attr.val && typeof attr.val === "string" && attr.val.length > 0) {
+        let tokens = attr.val.split(" ").filter(x => x.length > 0)
+        let els = []
+        for(let token of tokens) {
+          els.push(`<span class='token' data-value="${token}">${token}</span>`)
+        }
+        el = els.join(" ")
+      } else {
+        el = ""
       }
-      el = els.join(" ")
     } else if (attr.key === "file_path" && attr.val) {
       let tokens = attr.val.split(/[\/\\]/).filter(x => x.length > 0)
       let els = []
