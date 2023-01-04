@@ -97,17 +97,21 @@ class Navbar {
     }
 
     let tag_captured = {}
+    let to_replace = []
     while(true) {
       let test = tag_re.exec(phrase)
       if (test) {
-        console.log("test", test)
         let captured = test[1]
-        let tag_placeholder = "tag:" + Date.now()
-        phrase = phrase.replace(tag_re, tag_placeholder)
+        let tag_placeholder = "tag:" + Math.floor(Math.random() * 100000)
+        to_replace.push(tag_placeholder)
         tag_captured[tag_placeholder] = captured
       } else {
         break;
       }
+    }
+    let tag_re2 = /tag:"([^"]+)"/
+    for(let tag_placeholder of to_replace) {
+      phrase = phrase.replace(tag_re2, tag_placeholder)
     }
 
     let prefixes = phrase.split(" ").filter(x => x && x.length > 0)

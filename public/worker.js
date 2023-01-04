@@ -57,24 +57,23 @@ const preprocess_query = (phrase) => {
     mn_captured = test[1]
   }
 
-  console.log("PP", phrase)
-
   let tag_captured = {}
+  let to_replace = []
   while(true) {
     let test = tag_re.exec(phrase)
     if (test) {
-      console.log("test", test)
       let captured = test[1]
-      let tag_placeholder = "tag:" + Date.now()
-      phrase = phrase.replace(tag_re, tag_placeholder)
+      let tag_placeholder = "tag:" + Math.floor(Math.random() * 100000)
+      to_replace.push(tag_placeholder)
       tag_captured[tag_placeholder] = captured
     } else {
       break;
     }
   }
-
-  console.log("tag_captured", tag_captured)
-
+  let tag_re2 = /tag:"([^"]+)"/
+  for(let tag_placeholder of to_replace) {
+    phrase = phrase.replace(tag_re2, tag_placeholder)
+  }
 
   let prefixes = phrase.split(" ").filter(x => x && x.length > 0)
   const converted = []
@@ -116,9 +115,7 @@ function find (phrase) {
   // run the split
   // replace the pattern after the split
 
-  console.log("phrase", phrase)
   let prefixes = preprocess_query(phrase)
-  console.log("prefixes", prefixes)
   let tokens = []
   let filters = []
   for(let prefix of prefixes) {
@@ -146,7 +143,6 @@ function find (phrase) {
       tokens.push(prefix)
     }
   }
-  console.log("filters", filters)
 
   return db.transaction('r', db.files, function*() {
     let promises
@@ -169,7 +165,6 @@ function find (phrase) {
 }
 addEventListener("message", async event => {
   const { query, sorter } = event.data;
-  console.log("query, sorter", query, sorter)
   let res = []
   if (query) {
     res = await find(query, sorter)
@@ -178,7 +173,6 @@ addEventListener("message", async event => {
         res.sort((x, y) => { return x[sorter.column] - y[sorter.column] })
       } else if (sorter.compare === 1) {
         res.sort((x, y) => {
-          console.log(x, y)
           return x[sorter.column].localeCompare(y[sorter.column])
         })
       }
@@ -187,7 +181,6 @@ addEventListener("message", async event => {
         res.sort((x, y) => { return y[sorter.column] - x[sorter.column] })
       } else if (sorter.compare === 1) {
         res.sort((x, y) => {
-          console.log(x, y)
           return y[sorter.column].localeCompare(x[sorter.column])
         })
       }
