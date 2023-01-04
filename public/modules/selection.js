@@ -96,13 +96,15 @@ class Selection {
     document.querySelector(".container").ondragstart = (event) => {
       event.preventDefault()
       event.stopPropagation()
-      let filenames = this.els.map((el) => {
-        return el.querySelector("img").getAttribute("data-src")
-      })
       if (this.els.length > 0) {
-        this.ds.setSelection(this.els)
+        let filenames = this.els.map((el) => {
+          return el.querySelector("img").getAttribute("data-src")
+        })
+        if (this.els.length > 0) {
+          this.ds.setSelection(this.els)
+        }
+        window.electronAPI.startDrag(filenames)
       }
-      window.electronAPI.startDrag(filenames)
     }
     document.querySelector("#cancel-selection").addEventListener("click", async (e) => {
       this.ds.setSelection([])
