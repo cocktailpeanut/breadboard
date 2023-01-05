@@ -13,6 +13,7 @@ class Standard {
   }
   async sync(filename, force) {
     let info = await this.gm.get(filename)
+    console.log("info", info)
     try {
       // no XMP tag => parse the custom headers and convert to XMP
       if (!info.parsed || force) {

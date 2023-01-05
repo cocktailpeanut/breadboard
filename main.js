@@ -213,7 +213,6 @@ app.whenReady().then(async () => {
         .withBasePath()
         .crawl(rpc.root_path)
         .withPromise()
-      console.log("filenames", filenames)
 
       if (filenames.length > 0) {
         let crawler;
@@ -222,14 +221,20 @@ app.whenReady().then(async () => {
         } else {
           crawler = new Standard(rpc.root_path)
         }
+        console.log("initializing crawler")
         await crawler.init()
+        console.log("crawler initialized)
         for(let i=0; i<filenames.length; i++) {
           let filename = filenames[i]
           let stat = await fs.promises.stat(filename)
+          console.log("stat", stat)
           let btime = new Date(stat.birthtime).getTime()
+          console.log("btime", bitme)
+          console.log("rpc.checkpoint", rpc.checkpoint)
           if (btime > rpc.checkpoint) {
-//            console.log("above checkpoint", btime, rpc.checkpoint, filename)
+            console.log("above checkpoint", btime, rpc.checkpoint, filename)
             let res = await crawler.sync(filename, rpc.force)
+            console.log("RES", res)
             if (res) {
               await queue.push({
                 app: rpc.root_path,
