@@ -213,6 +213,7 @@ app.whenReady().then(async () => {
         .withBasePath()
         .crawl(rpc.root_path)
         .withPromise()
+      console.log("filenames", filenames)
 
       if (filenames.length > 0) {
         let crawler;
