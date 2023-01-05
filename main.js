@@ -223,7 +223,7 @@ app.whenReady().then(async () => {
         }
         console.log("initializing crawler")
         await crawler.init()
-        console.log("crawler initialized)
+        console.log("crawler initialized")
         for(let i=0; i<filenames.length; i++) {
           let filename = filenames[i]
           let stat = await fs.promises.stat(filename)
