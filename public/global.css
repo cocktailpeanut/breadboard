@@ -1,3 +1,6 @@
+:root {
+  --card-width: 200px;
+}
 html {
   height: 100%;
   width: 100%;
@@ -38,14 +41,11 @@ body {
   height: 1000px;
 }
 .card {
-  width: 200px;
+  width: var(--card-width);
   background: white;
-  /*
-  padding: 20px;
-  */
   box-sizing: border-box;
   align-items: flex-start;
-  margin: 15px;
+  border: 1px solid rgba(0,0,0,0.1);
 
   overflow-wrap: break-word;
   word-wrap: break-word;
@@ -85,46 +85,28 @@ body {
   border: none;
   cursor: pointer;
 }
-/*
-.card .grab:hover {
-  background: royalblue;
-}
-*/
 .card .grab {
-/*
-  height: 15px;
-  */
   padding: 5px;
   box-sizing: border-box;
   text-align: right;
   cursor: pointer;
-  /*
-  color: rgba(0,0,0,0.7);
+
+/*
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10000;
+  display: none;
+  background: rgba(0,0,0,0.4);
   */
 }
-/*
-.card .grab {
-  display: inline-block;
-  font-size: 30px;
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  z-index: 1000;
-  color: rgba(255,255,255,0.4);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
+.card:hover .grab {
+  display: block;
 }
-*/
 .card.fullscreen {
   width: 100% !important;
 }
-/*
-.card.expanded .grab {
-  display: none;
-}
-*/
 .grab button:hover {
   color: royalblue;
 }
@@ -142,12 +124,6 @@ body {
 }
 .card.removed {
   opacity: 0;
-  /*
-  width: 0;
-  height: 0;
-  overflow: hidden;
-  padding: 0;
-  */
 }
 .card.expanded {
   width: 600px;
@@ -156,9 +132,6 @@ body {
   user-select: auto;
 }
 .card.expanded td {
-/*
-  display: table-cell;
-  */
   font-size: 1rem;
 }
 .card.expanded h4, .card.fullscreen h4 {
@@ -209,7 +182,7 @@ body {
   font-weight: normal;
   box-sizing: border-box;
   margin:0;
-  font-size: 1.0rem;
+  font-size: 0.8rem;
   display: block;
   -webkit-transition: font-size 0.2s ease-in-out;
   -moz-transition: font-size 0.2s ease-in-out;
@@ -221,6 +194,7 @@ body {
   -webkit-line-clamp: 6;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  display: none !important;
 }
 .card img {
   width: 100%;
@@ -231,6 +205,9 @@ body {
 .card .col {
   padding: 10px 0;
   box-sizing: border-box;
+}
+.card:not(.expanded) .col {
+  padding: 0;
 }
 .card pre {
   overflow-wrap: break-word;
@@ -287,11 +264,6 @@ tr button.copy-text, tr button.edit-tags, tr button.open-file {
 nav {
   padding: 32px 10px 5px;
 }
-/*
-nav.darwin {
-  padding: 30px 10px 5px;
-}
-*/
 nav {
   -webkit-app-region: drag;
   position: -webkit-sticky;
@@ -327,7 +299,6 @@ nav button, nav .btn {
   box-sizing: border-box;
   text-decoration: none;
   border-radius: 4px;
-
   display: flex; /* CSS3 */
   align-items: center; /* Vertical align */
   justify-content: center; /* Horizontal align */
@@ -732,23 +703,10 @@ body.dark footer .tagger {
 body.dark .tagger-new input {
   color: white;
 }
-/*
-body.dark footer button {
-  border: 4px solid rgba(255,255,255,0.1);
-}
-*/
 body.dark .ds-selected {
   outline: 3px solid cornflowerblue;
   outline-offset: 3px;
 }
-/*
-body.dark .card .grab:hover {
-  background: cornflowerblue;
-}
-body.dark .card.ds-selected .grab {
-  background: cornflowerblue;
-}
-*/
 body.dark .settings, body.dark .favorites, body.dark .help {
   color: rgba(255,255,255,0.9);
 }
@@ -774,6 +732,7 @@ body.dark nav input {
 body.dark .card {
   background: rgba(255,255,255,0.05);
   color: rgba(255,255,255,0.8);
+  border: 1px solid rgba(255,255,255,0.1);
 }
 body.dark .card td {
   border-top: 1px solid rgba(255,255,255,0.03);

@@ -1,6 +1,23 @@
 class Handler {
+  resized () {
+    let width = document.body.clientWidth;
+    let cardwidth = 200;
+    let leftover = width % cardwidth;
+    let count = Math.floor(width / cardwidth)
+    let new_cardwidth = "" + (cardwidth + leftover / count - 2) + "px"
+    document.body.style.setProperty("--card-width", new_cardwidth)
+  }
   constructor (app) {
     this.app = app
+    let id;
+    window.addEventListener('resize', () => {
+      console.log("ree")
+      clearTimeout(id);
+      id = setTimeout(this.resized, 500);
+    });
+
+    this.resized()
+
     document.querySelector(".container").addEventListener("click", async (e) => {
       e.preventDefault()
       e.stopPropagation()

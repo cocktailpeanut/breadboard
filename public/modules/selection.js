@@ -96,14 +96,24 @@ class Selection {
     document.querySelector(".container").ondragstart = (event) => {
       event.preventDefault()
       event.stopPropagation()
+      let draggingTarget = (event.target.classList.contains(".card") ? event.target : event.target.closest(".card"))
+      let multiselecting = this.ds.isMultiSelect(event)
+      let dragging = this.ds.isDragging(event)
       if (this.els.length > 0) {
-        let filenames = this.els.map((el) => {
-          return el.querySelector("img").getAttribute("data-src")
-        })
-        if (this.els.length > 0) {
-          this.ds.setSelection(this.els)
+        if (this.els.includes(draggingTarget)) {
+          if (dragging) {
+            let filenames = this.els.map((el) => {
+              return el.querySelector("img").getAttribute("data-src")
+            })
+            this.ds.setSelection(this.els)
+            window.electronAPI.startDrag(filenames)
+          }
+        } else {
+          if (!multiselecting) {
+            this.ds.setSelection([draggingTarget])
+            this.update([draggingTarget])
+          }
         }
-        window.electronAPI.startDrag(filenames)
       }
     }
     document.querySelector("#cancel-selection").addEventListener("click", async (e) => {
@@ -211,8 +221,6 @@ class Selection {
         draggability: false,
       });
       this.ds.subscribe('callback', async (e) => {
-        console.log("e", e)
-        console.log("callback", e.items)
         if (e.items && e.items.length > 0) {
           // reset tags
           this.update(e.items)
@@ -241,7 +249,6 @@ class Selection {
     this.ds.clearSelection()
   }
   update (items) {
-    console.log("update", items)
 //    this.ds.setSelection(items)
     let addTagItems = this.addTagInput.value.split(",")
     for(let tagItem of addTagItems) {
