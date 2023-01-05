@@ -263,6 +263,7 @@ class App {
   }
   async fill (items) {
     const chunkSize = 800;
+    document.querySelector(".content-info").innerHTML = `<i class="fa-solid fa-check"></i> ${items.length}`
     document.querySelector(".container").classList.remove("hidden")
     document.querySelector(".status").innerHTML = "Loading..."
     let data = items.map((item) => {

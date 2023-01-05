@@ -20,6 +20,10 @@ body {
   outline: none;
   padding-bottom: 300px;
 }
+.content-info {
+  box-sizing: border-box;
+  font-size: 1rem;
+}
 .loading {
   padding: 50px;
   text-align: center;
