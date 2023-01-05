@@ -8,6 +8,13 @@
     <link href="/css/regular.min.css" rel="stylesheet">
     <link href="/css/brands.min.css" rel="stylesheet">
     <link href="./global.css" rel="stylesheet" />
+    <style>
+    body.default #reindex2 {
+      color: royalblue;
+    }
+    body.dark #reindex2 {
+      color: cornflowerblue;
+    }
     </style>
   </head>
   <body>
@@ -51,7 +58,7 @@
         location.href = "/"
       }
     }
-    const renderSettings = async () => {
+    const renderSettings = async (sync_needed) => {
       let res = await db.folders.toArray()
       let rows = res.map((r) => {
         return `<div class='row'>
@@ -79,6 +86,7 @@
         <h2>Connected Folders</h2>
         <div class='flexible'></div>
         <button id='select'><i class="fa-solid fa-folder-plus"></i> Add a folder</button>
+        <a id='reindex2' class='btn hidden' href="/?synchronize=default"><i class="fa-solid fa-rotate"></i> Synchronize</a>
       </div>
       <div class='rows'>
       ${rows}
@@ -116,61 +124,66 @@
         </div>
       </div>
     </main>`
+      if (sync_needed) {
+        document.querySelector(".settings #reindex2").classList.remove("hidden")
+      }
       const reindex = async () => {
         await db.files.clear()
         await db.checkpoints.clear()
 
         location.href = "/?synchronize=reindex"
-        // reset the indexedDB
-
-        /*
-        // force synchronize
-        forceSynchronize = true
-        await synchronize()
-        forceSynchronize = false
-        */
       }
       document.querySelector("input[type=range]").addEventListener("change", async (e) => {
+        e.preventDefault()
+        e.stopPropagation()
         window.electronAPI.zoom(e.target.value)
         await db.settings.put({ key: "zoom", val: e.target.value })
         e.target.closest(".rows").querySelector(".currentZoom").innerHTML = "" + e.target.value + "%"
       })
-      document.querySelector("#reindex").addEventListener("click", async () => {
+      document.querySelector("#reindex").addEventListener("click", async (e) => {
+        e.preventDefault()
+        e.stopPropagation()
         await reindex()
       })
-      document.querySelector("#select").addEventListener('click', async () => {
+      document.querySelector("#reindex2").addEventListener("click", async (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        await reindex()
+      })
+      document.querySelector("#select").addEventListener('click', async (e) => {
+        e.preventDefault()
+        e.stopPropagation()
         let paths = await window.electronAPI.select()
-        for(let name of paths) {
-          await db.folders.put({ name: name })
+        if (paths && paths.length > 0) {
+          for(let name of paths) {
+            await db.folders.put({ name: name })
+          }
+          await renderSettings(true)
         }
-        await renderSettings()
-        setTimeout(async () => {
-          location.href = "/?synchronize=default"
-        }, 1000)
       })
       document.querySelector(".settings").addEventListener("click", async (e) => {
         e.preventDefault()
         e.stopPropagation()
         let target = (e.target.classList.contains("del") ? e.target : e.target.closest(".del"))
-        console.log("target", target)
         if (target) {
           const confirmed = confirm("disconnect the folder?")
           if (confirmed) {
             let name = target.getAttribute("data-name")
-            console.log("name", name)
             await db.folders.where({ name }).delete()
+            await db.files.where({ root_path: name }).delete()
             await renderSettings()
-            setTimeout(async () => {
-              await reindex()
-            }, 0)
           }
         }
       })
-      document.querySelector("#dark-theme").addEventListener('click', async () => {
+      document.querySelector("#dark-theme").addEventListener('click', async (e) => {
+        e.preventDefault()
+        e.stopPropagation()
         await db.settings.put({ key: "theme", val: "dark" })
         await init_theme()
       })
-      document.querySelector("#default-theme").addEventListener('click', async () => {
+      document.querySelector("#default-theme").addEventListener('click', async (e) => {
+        e.preventDefault()
+        e.stopPropagation()
         await db.settings.put({ key: "theme", val: "default" })
         await init_theme()
       })

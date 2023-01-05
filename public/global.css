@@ -426,7 +426,7 @@ nav button#favorite {
   display: flex;
   align-items: center;
 }
-.settings button, .help main .header button, .favorites main .header button {
+.settings button, .settings .btn, .help main .header button, .favorites main .header button {
   border: none;
   background: black;
   border-radius: 2px;
@@ -434,7 +434,9 @@ nav button#favorite {
   cursor: pointer;
   padding: 5px 10px;
   font-weight: bold;
+  font-size: 1rem;
   margin-right: 5px;
+  text-decoration: none;
 }
 .settings .del {
   border: none;
@@ -752,7 +754,7 @@ body.dark main .item {
 body.dark .settings .del {
   color: white;
 }
-body.dark .settings button, body.dark .favorites button {
+body.dark .settings button, body.dark .settings .btn, body.dark .favorites button, body.dark .favorites .btn {
   background: rgba(255,255,255,0.05);
   color: rgba(255,255,255,0.9);
 }
