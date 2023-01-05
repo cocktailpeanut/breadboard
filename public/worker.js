@@ -173,7 +173,9 @@ addEventListener("message", async event => {
         res.sort((x, y) => { return x[sorter.column] - y[sorter.column] })
       } else if (sorter.compare === 1) {
         res.sort((x, y) => {
-          return x[sorter.column].localeCompare(y[sorter.column])
+          let xx = (x[sorter.column] && typeof x[sorter.column] === 'string' ? x[sorter.column] : "")
+          let yy = (y[sorter.column] && typeof y[sorter.column] === 'string' ? y[sorter.column] : "")
+          return xx.localeCompare(yy)
         })
       }
     } else if (sorter.direction < 0) {
@@ -181,7 +183,9 @@ addEventListener("message", async event => {
         res.sort((x, y) => { return y[sorter.column] - x[sorter.column] })
       } else if (sorter.compare === 1) {
         res.sort((x, y) => {
-          return y[sorter.column].localeCompare(x[sorter.column])
+          let xx = (x[sorter.column] && typeof x[sorter.column] === 'string' ? x[sorter.column] : "")
+          let yy = (y[sorter.column] && typeof y[sorter.column] === 'string' ? y[sorter.column] : "")
+          return yy.localeCompare(xx)
         })
       }
     }
