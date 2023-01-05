@@ -231,7 +231,7 @@ app.whenReady().then(async () => {
           let btime = new Date(stat.birthtime).getTime()
           console.log("btime", btime)
           console.log("rpc.checkpoint", rpc.checkpoint)
-          if (btime > rpc.checkpoint) {
+          if (!rpc.checkpoint || btime > rpc.checkpoint) {
             console.log("above checkpoint", btime, rpc.checkpoint, filename)
             let res = await crawler.sync(filename, rpc.force)
             console.log("RES", res)
