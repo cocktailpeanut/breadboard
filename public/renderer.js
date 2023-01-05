@@ -16,6 +16,7 @@ class App {
         target: document.querySelector("#bar")
       });
     }
+    this.domparser = new DOMParser()
   }
   async clear_db() {
     // TODO => Must switch to only clearing files and checkpoints in the next release
@@ -71,7 +72,9 @@ class App {
     let tokens = []
     let wordSet = {}
     if (o.prompt && typeof o.prompt === 'string' && o.prompt.length > 0) {
-      wordSet = this.stripPunctuation(o.prompt).split(' ')
+      let p = this.domparser.parseFromString(o.prompt, "text/html").documentElement.textContent;
+
+      wordSet = this.stripPunctuation(p).split(' ')
 //      .map((x) => {
 //        return this.stripPunctuation(x)
 //      })

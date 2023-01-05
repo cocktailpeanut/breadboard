@@ -133,6 +133,9 @@
 
         location.href = "/?synchronize=reindex"
       }
+      const synchronize = () => {
+        location.href = "/?synchronize=default"
+      }
       document.querySelector("input[type=range]").addEventListener("change", async (e) => {
         e.preventDefault()
         e.stopPropagation()

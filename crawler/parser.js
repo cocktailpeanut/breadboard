@@ -1,5 +1,6 @@
 const exifr = require('exifr')
 const fs = require('fs')
+const escapeHtml = require('escape-html')
 const GM = require('./gm')
 class Parser {
   constructor() {
@@ -17,7 +18,14 @@ class Parser {
     } else if (parsed.parameters) {
       app = "automatic1111"
     }
-    return { ...attrs, ...this.getMeta(parsed), app }
+    let meta = this.getMeta(parsed)
+    for(let key in meta) {
+      if (typeof meta[key] === "string") {
+        meta[key] = escapeHtml(meta[key])
+      }
+    }
+
+    return { ...attrs, ...meta, app }
   }
 
   convert(e, options) {

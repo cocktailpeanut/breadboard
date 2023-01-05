@@ -1,6 +1,7 @@
 const meta = require('png-metadata')
 const { XMLParser, XMLBuilder, XMLValidator} = require("fast-xml-parser")
 const fs = require('fs')
+const escapeHtml = require('escape-html')
 class GM {
   constructor() {
     this.parser = new XMLParser();
@@ -190,7 +191,8 @@ class GM {
       if (gms) {
         for(let key of keys) {
           if (gms[key]) {
-            res.push({ key, val: gms[key] })
+            let val = escapeHtml(gms[key])
+            res.push({ key, val })
           } else {
             res.push({ key, })
           }
