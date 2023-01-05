@@ -20,6 +20,20 @@ class Parser {
     return { ...attrs, ...this.getMeta(parsed), app }
   }
 
+  async parseParametersText(parsed, parametersText) {
+
+    const metadata = this.getMeta({
+      ...parsed,
+      parameters: parametersText
+    })
+
+    if (!metadata) {
+      return parsed;
+    }
+
+    return { ...metadata, app: "automatic1111" }
+  }
+
   convert(e, options) {
   /*
   automatic111 {
@@ -182,7 +196,7 @@ class Parser {
       "xmp:agent",
       "dc:subject"
     ]
-    
+
     let list = []
     for(let key of keys) {
       if (x[key]) {
