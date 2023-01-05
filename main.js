@@ -229,7 +229,7 @@ app.whenReady().then(async () => {
           let stat = await fs.promises.stat(filename)
           console.log("stat", stat)
           let btime = new Date(stat.birthtime).getTime()
-          console.log("btime", bitme)
+          console.log("btime", btime)
           console.log("rpc.checkpoint", rpc.checkpoint)
           if (btime > rpc.checkpoint) {
             console.log("above checkpoint", btime, rpc.checkpoint, filename)
