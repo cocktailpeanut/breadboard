@@ -1,9 +1,10 @@
 class App {
-  constructor (query, sorter_code, need_update, sync_mode) {
+  constructor (query, sorter_code, need_update, sync_mode, sync_folder) {
     this.init_rpc()
     this.query = query
     this.sorter_code = sorter_code
     this.sync_mode = sync_mode
+    this.sync_folder = sync_folder
     this.checkpoints = { }
     this.selection = new Selection(this)
     this.navbar = new Navbar(this);
@@ -37,7 +38,7 @@ class App {
     await this.init_theme()
     await this.init_zoom()
     this.init_worker()
-    if (this.sync_mode === "default" || this.sync_mode === "reindex") {
+    if (this.sync_mode === "default" || this.sync_mode === "reindex" || this.sync_mode === "reindex_folder") {
       await this.synchronize()
     } else {
       await this.draw()
@@ -206,6 +207,8 @@ class App {
     }
   }
   async synchronize (paths, cb) {
+    console.log("this.sync_mode", this.sync_mode)
+    console.log("this.sync_folder", this.sync_folder)
     document.querySelector("#sync").classList.add("disabled")
     document.querySelector("#sync").disabled = true
     document.querySelector("#sync i").classList.add("fa-spin")
@@ -226,22 +229,52 @@ class App {
         await cb()
       }
     } else {
-      let folderpaths = await this.db.folders.toArray()
-      for(let folderpath of folderpaths) {
-        let root_path = folderpath.name
-        let c = await this.checkpoint(root_path)
-        document.querySelector(".status").innerHTML = "synchronizing from " + root_path
+      if (this.sync_mode === "reindex" || this.sync_mode === "default") {
+        let folderpaths = await this.db.folders.toArray()
+        for(let folderpath of folderpaths) {
+          let root_path = folderpath.name
+          let c = await this.checkpoint(root_path)
+          document.querySelector(".status").innerHTML = "synchronizing from " + root_path
+          this.sync_counter = 0
+          this.sync_complete = false
+          await new Promise((resolve, reject) => {
+            const config = {
+              root_path,
+              checkpoint: c,
+            }
+            if (this.sync_mode === "default") {
+              // nothing
+            } else if (this.sync_mode === "reindex") {
+              config.force = true
+            }
+            window.electronAPI.sync(config)
+            let interval = setInterval(() => {
+              if (this.sync_complete) {
+                clearInterval(interval)
+                resolve()
+              }
+            }, 1000)
+          })
+        }
+        this.sync_counter = 0
+        document.querySelector(".status").innerHTML = ""
+        console.log("DONE")
+        this.bar.go(100)
+        let query = document.querySelector(".search").value
+        if (query && query.length > 0) {
+          await this.search(query)
+        } else {
+          await this.search()
+        }
+      } else if (this.sync_mode === "reindex_folder" && this.sync_folder && this.sync_folder.length > 0) {
+        console.log("reindex folder", this.sync_folder)
+        document.querySelector(".status").innerHTML = "synchronizing from " + this.sync_folder
         this.sync_counter = 0
         this.sync_complete = false
         await new Promise((resolve, reject) => {
           const config = {
-            root_path,
-            checkpoint: c,
-          }
-          if (this.sync_mode === "true") {
-            // nothing
-          } else if (this.sync_mode === "reindex") {
-            config.force = true
+            root_path: this.sync_folder,
+            force: true,
           }
           window.electronAPI.sync(config)
           let interval = setInterval(() => {
@@ -251,16 +284,16 @@ class App {
             }
           }, 1000)
         })
-      }
-      this.sync_counter = 0
-      document.querySelector(".status").innerHTML = ""
-      console.log("DONE")
-      this.bar.go(100)
-      let query = document.querySelector(".search").value
-      if (query && query.length > 0) {
-        await this.search(query)
-      } else {
-        await this.search()
+        this.sync_counter = 0
+        document.querySelector(".status").innerHTML = ""
+        console.log("DONE")
+        this.bar.go(100)
+        let query = document.querySelector(".search").value
+        if (query && query.length > 0) {
+          await this.search(query)
+        } else {
+          await this.search()
+        }
       }
     }
   }
@@ -322,7 +355,7 @@ if (document.querySelector("#query")) {
 }
 console.log("QUERY", QUERY)
 
-const app = new App(QUERY, SORTER, NEED_UPDATE, SYNC_MODE);
+const app = new App(QUERY, SORTER, NEED_UPDATE, SYNC_MODE, SYNC_FOLDER);
 (async () => {
   await app.init()
 })();

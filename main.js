@@ -107,6 +107,7 @@ app.whenReady().then(async () => {
   server.set('views', path.resolve(__dirname, "views"))
   server.get("/", async (req, res) => {
     let sync_mode = (req.query.synchronize ? req.query.synchronize : default_sync_mode)
+    let sync_folder = (req.query.sync_folder ? req.query.sync_folder : "")
     if (req.query && req.query.sorter_code) {
       current_sorter_code = req.query.sorter_code
     }
@@ -117,6 +118,7 @@ app.whenReady().then(async () => {
       query: req.query,
       version: VERSION,
       sync_mode,
+      sync_folder,
       need_update,
       current_sorter_code
     })

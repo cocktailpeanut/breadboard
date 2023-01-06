@@ -64,7 +64,10 @@
       let res = await db.folders.toArray()
       let rows = res.map((r) => {
         return `<div class='row'>
-        <button class='del' data-name='${r.name}'><i class="fa-regular fa-trash-can"></i></button> <div>${r.name}</div>
+        <div>${r.name}</div>
+        <div class='flexible'></div>
+        <button class='reindex-folder' data-name='${r.name}'><i class="fa-solid fa-rotate"></i> Re-index</button> 
+        <button class='del' data-name='${r.name}'><i class="fa-regular fa-trash-can"></i> Delete</button> 
     </div>`
       }).join("")
 
@@ -122,21 +125,12 @@
       </div>
       <div class='rows'>
         <div class='row'>
-          <button id='reindex'><i class="fa-solid fa-rotate"></i> Re-index</button>
+          <button id='reindex'><i class="fa-solid fa-rotate"></i> Fresh Re-index All</button>
         </div>
       </div>
     </main>`
       if (sync_needed) {
         document.querySelector(".settings #reindex2").classList.remove("hidden")
-      }
-      const reindex = async () => {
-        await db.files.clear()
-        await db.checkpoints.clear()
-
-        location.href = "/?synchronize=reindex"
-      }
-      const synchronize = () => {
-        location.href = "/?synchronize=default"
       }
       document.querySelector("input[type=range]").addEventListener("change", async (e) => {
         e.preventDefault()
@@ -148,12 +142,14 @@
       document.querySelector("#reindex").addEventListener("click", async (e) => {
         e.preventDefault()
         e.stopPropagation()
-        await reindex()
+        await db.files.clear()
+        await db.checkpoints.clear()
+        location.href = "/?synchronize=reindex"
       })
       document.querySelector("#reindex2").addEventListener("click", async (e) => {
         e.preventDefault()
         e.stopPropagation()
-        synchronize()
+        location.href = "/?synchronize=default"
       })
       document.querySelector("#select").addEventListener('click', async (e) => {
         e.preventDefault()
@@ -169,15 +165,27 @@
       document.querySelector(".settings").addEventListener("click", async (e) => {
         e.preventDefault()
         e.stopPropagation()
-        let target = (e.target.classList.contains("del") ? e.target : e.target.closest(".del"))
-        if (target) {
+        let delTarget = (e.target.classList.contains("del") ? e.target : e.target.closest(".del"))
+        let reindexTarget = (e.target.classList.contains("reindex-folder") ? e.target : e.target.closest(".reindex-folder"))
+        if (delTarget) {
           const confirmed = confirm("disconnect the folder?")
           if (confirmed) {
-            let name = target.getAttribute("data-name")
+            let name = delTarget.getAttribute("data-name")
+            // Delete the folder
             await db.folders.where({ name }).delete()
+            // Delete all the files in the folder
             await db.files.where({ root_path: name }).delete()
+            // Delete the checkpoint
+            await db.checkpoints.where({ root_path: name }).delete()
             await renderSettings()
           }
+        } else if (reindexTarget) {
+          let name = reindexTarget.getAttribute("data-name")
+          // Delete all the files in the folder
+          await db.files.where({ root_path: name }).delete()
+          // Delete the checkpoint
+          await db.checkpoints.where({ root_path: name }).delete()
+          location.href = "/?synchronize=reindex_folder&sync_folder="+encodeURIComponent(name)
         }
       })
       document.querySelector("#dark-theme").addEventListener('click', async (e) => {
