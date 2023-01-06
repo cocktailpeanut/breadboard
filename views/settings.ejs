@@ -200,6 +200,11 @@
         await db.settings.put({ key: "theme", val: "default" })
         await init_theme()
       })
+      document.querySelector(".search").addEventListener("keyup", (e) => {
+        if (e.key === "Enter") {
+          location.href = "/?query=" + e.target.value
+        }
+      })
       settingsRendered = true
     }
     (async () => {

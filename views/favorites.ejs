@@ -74,6 +74,11 @@
       </div>
     </main>`
     }
+    document.querySelector(".search").addEventListener("keyup", (e) => {
+      if (e.key === "Enter") {
+        location.href = "/?query=" + e.target.value
+      }
+    });
     (async () => {
       await init_db()
       await init_theme()
