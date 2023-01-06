@@ -10,10 +10,12 @@
     <link href="./global.css" rel="stylesheet" />
     <style>
     body.default #reindex2 {
-      color: royalblue;
+      background: royalblue;
+      color: white;
     }
     body.dark #reindex2 {
-      color: cornflowerblue;
+      background: cornflowerblue;
+      color: white;
     }
     </style>
   </head>
@@ -62,7 +64,7 @@
       let res = await db.folders.toArray()
       let rows = res.map((r) => {
         return `<div class='row'>
-        <div>${r.name}</div><div class='flexible'></div><button class='del' data-name='${r.name}'><i class="fa-regular fa-trash-can"></i></button>
+        <button class='del' data-name='${r.name}'><i class="fa-regular fa-trash-can"></i></button> <div>${r.name}</div>
     </div>`
       }).join("")
 
@@ -151,7 +153,7 @@
       document.querySelector("#reindex2").addEventListener("click", async (e) => {
         e.preventDefault()
         e.stopPropagation()
-        await reindex()
+        synchronize()
       })
       document.querySelector("#select").addEventListener('click', async (e) => {
         e.preventDefault()
