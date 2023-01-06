@@ -312,6 +312,9 @@ app.whenReady().then(async () => {
     })
     modal.loadURL(`http://localhost:${port}/docs/doc.html`)
   })
+  ipcMain.handle('debug', (event) => {
+    mainWindow.webContents.openDevTools()
+  })
 
   createWindow(port)
 //  synchronize()

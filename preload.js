@@ -47,5 +47,8 @@ contextBridge.exposeInMainWorld('electronAPI',{
   },
   theme: (val) => {
     ipcRenderer.invoke("theme", val)
+  },
+  debug: () => {
+    ipcRenderer.invoke("debug")
   }
 })

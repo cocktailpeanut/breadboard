@@ -149,6 +149,16 @@
           <button id='reindex'><i class="fa-solid fa-rotate"></i> Re-index from Scratch</button>
         </div>
       </div>
+      <br><br>
+      <div class='header'>
+        <h2>Debug</h2>
+        <div class='flexible'></div>
+      </div>
+      <div class='rows'>
+        <div class='row'>
+          <button id='debug'><i class="fa-solid fa-terminal"></i> Debug</button>
+        </div>
+      </div>
     </main>`
       if (sync_needed) {
         document.querySelector(".settings #reindex2").classList.remove("hidden")
@@ -186,6 +196,9 @@
 
         // 3. Send to reindex (the home page will read the localStorage to automatically fill the favorites and settings DB after reindexing)
         location.href = "/?synchronize=reindex"
+      })
+      document.querySelector("#debug").addEventListener('click', async (e) => {
+        window.electronAPI.debug()
       })
       document.querySelector("#select").addEventListener('click', async (e) => {
         e.preventDefault()
