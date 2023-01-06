@@ -25,7 +25,8 @@ body {
 }
 .content-info {
   box-sizing: border-box;
-  font-size: 1rem;
+  text-align: center;
+  font-size: 14px;
 }
 .loading {
   padding: 50px;
@@ -409,15 +410,17 @@ nav button#favorite {
   cursor: pointer;
   padding: 5px 10px;
   font-weight: bold;
-  font-size: 1rem;
+  font-size: 12px;
   margin-right: 5px;
   text-decoration: none;
 }
 .settings .del {
   border: none;
-  background: none;
-  color: black;
+  background: none !important;
+  color: red;
   cursor: pointer;
+  padding: 0;
+  margin-right: 10px;
 }
 
 footer button {
@@ -714,7 +717,7 @@ body.dark main .item {
   color: white;
 }
 body.dark .settings .del {
-  color: white;
+  color: red;
 }
 body.dark .settings button, body.dark .settings .btn, body.dark .favorites button, body.dark .favorites .btn {
   background: rgba(255,255,255,0.05);
