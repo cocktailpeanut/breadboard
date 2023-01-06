@@ -269,7 +269,7 @@ class App {
         await cb()
       }
     } else {
-      if (this.sync_mode === "reindex" || this.sync_mode === "default") {
+      if (this.sync_mode === "reindex" || this.sync_mode === "default" || this.sync_mode === "false") {
         let folderpaths = await this.db.folders.toArray()
         for(let folderpath of folderpaths) {
           let root_path = folderpath.name
