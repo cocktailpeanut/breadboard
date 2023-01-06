@@ -221,21 +221,16 @@ app.whenReady().then(async () => {
         } else {
           crawler = new Standard(rpc.root_path)
         }
-        console.log("initializing crawler")
         await crawler.init()
-        console.log("crawler initialized")
         for(let i=0; i<filenames.length; i++) {
           let filename = filenames[i]
           let stat = await fs.promises.stat(filename)
-          console.log("stat", stat)
           let btime = new Date(stat.birthtime).getTime()
-          console.log("btime", btime)
-          console.log("rpc.checkpoint", rpc.checkpoint)
           if (!rpc.checkpoint || btime > rpc.checkpoint) {
             console.log("above checkpoint", btime, rpc.checkpoint, filename)
             let res = await crawler.sync(filename, rpc.force)
-            console.log("RES", res)
             if (res) {
+              if (!res.btime) res.btime = res.mtime
               await queue.push({
                 app: rpc.root_path,
                 total: filenames.length,
