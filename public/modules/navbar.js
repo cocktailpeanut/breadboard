@@ -46,12 +46,21 @@ class Navbar {
       let query = document.querySelector(".search").value
       if (query && query.length > 0) {
         let exists = await this.app.db.favorites.get({ query })
+        let favorited;
         if (exists) {
           await this.app.db.favorites.where({ query }).delete()
+          favorited = false
         } else {
           await this.app.db.favorites.put({ query })
+          favorited = true
         }
-        await this.app.search(query)
+        if (favorited) {
+          document.querySelector("nav #favorite").classList.add("selected") 
+          document.querySelector("nav #favorite i").className = "fa-solid fa-star"
+        } else {
+          document.querySelector("nav #favorite").classList.remove("selected") 
+          document.querySelector("nav #favorite i").className = "fa-regular fa-star"
+        }
       }
     })
     document.querySelector("nav select").addEventListener("change", async (e) => {
