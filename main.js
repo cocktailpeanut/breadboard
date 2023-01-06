@@ -111,8 +111,6 @@ app.whenReady().then(async () => {
     if (req.query && req.query.sorter_code) {
       current_sorter_code = req.query.sorter_code
     }
-    console.log("current_sorter", current_sorter_code)
-    console.log("query", req.query)
     res.render("index", {
       platform: process.platform,
       query: req.query,
@@ -229,7 +227,7 @@ app.whenReady().then(async () => {
           let stat = await fs.promises.stat(filename)
           let btime = new Date(stat.birthtime).getTime()
           if (!rpc.checkpoint || btime > rpc.checkpoint) {
-            console.log("above checkpoint", btime, rpc.checkpoint, filename)
+            //console.log("above checkpoint", btime, rpc.checkpoint, filename)
             let res = await crawler.sync(filename, rpc.force)
             if (res) {
               if (!res.btime) res.btime = res.mtime

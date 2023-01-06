@@ -52,6 +52,8 @@ class GM {
       "xmp:model_name",
       "xmp:model_url",
       "xmp:agent",
+      "xmp:width",
+      "xmp:height",
       "dc:subject",
     ]
 
@@ -186,6 +188,8 @@ class GM {
         "xmp:model_name",
         "xmp:model_url",
         "xmp:agent",
+        "xmp:width",
+        "xmp:height",
       ]
       let res = []
       if (gms) {

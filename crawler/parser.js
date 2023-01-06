@@ -82,6 +82,21 @@ class Parser {
 
     const x = {}
 
+    if (options && options.width) {
+      x["xmp:width"] = parseInt(options.width)
+    } else if (e.width) {
+      x["xmp:width"] = parseInt(e.width)
+    } else if (e.img_w) {
+      x["xmp:width"] = parseInt(e.img_w)
+    }
+    if (options && options.height) {
+      x["xmp:height"] = parseInt(options.height)
+    } else if (e.height) {
+      x["xmp:height"] = parseInt(e.height)
+    } else if (e.img_h) {
+      x["xmp:height"] = parseInt(e.img_h)
+    }
+
     if (options && options.cfg) {
       x["xmp:cfg_scale"] = options.cfg
     } else if (e["CFG scale"]) {
@@ -188,7 +203,9 @@ class Parser {
       "xmp:model_name",
       "xmp:model_url",
       "xmp:agent",
-      "dc:subject"
+      "xmp:width",
+      "xmp:height",
+      "dc:subject",
     ]
     
     let list = []
@@ -202,6 +219,19 @@ class Parser {
 
     return list
 
+  }
+  applyType(item) {
+    let integers = ["xmp:steps", "xmp:seed", "xmp:width", "xmp:height"]
+    let floats = ["xmp:cfg_scale"]
+    if (integers.includes(item.key)) {
+      return parseInt(item.val)
+    }
+
+    if (floats.includes(item.key)) {
+      return parseFloat(item.val)
+    }
+
+    return item.val
   }
 //  flatten (app, converted, filepath, btime, mtime) {
 //    return {
@@ -228,7 +258,7 @@ class Parser {
       if (typeof item.val !== "undefined") {
         if (item.key.startsWith("xmp:")) {
           let key = item.key.replace("xmp:", "").toLowerCase()
-          o[key] = item.val
+          o[key] = this.applyType(item)
         } else if (item.key.startsWith("dc:")) {
           let key = item.key.replace("dc:", "").toLowerCase()
           if (Array.isArray(item.val) && item.val.length > 0) {

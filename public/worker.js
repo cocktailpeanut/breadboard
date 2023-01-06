@@ -1,7 +1,7 @@
 importScripts("./dexie.js")
 var db = new Dexie("breadboard")
 db.version(1).stores({
-  files: "file_path, agent, model_name, root_path, prompt, btime, mtime, *tokens",
+  files: "file_path, agent, model_name, root_path, prompt, btime, mtime, width, height, *tokens",
   folders: "&name",
   checkpoints: "&root_path, btime",
   settings: "key, val",
