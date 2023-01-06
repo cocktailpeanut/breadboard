@@ -133,13 +133,58 @@ class App {
   async init_db () {
     this.db = new Dexie("breadboard")
     this.db.version(1).stores({
-      files: "file_path, agent, model_name, root_path, prompt, btime, mtime, *tokens",
+      files: "file_path, agent, model_name, root_path, prompt, btime, mtime, width, height, *tokens",
       folders: "&name",
       checkpoints: "&root_path, btime",
       settings: "key, val",
       favorites: "query"
     })
     await this.persist()
+
+    // try to recover from backup if backup exists, and then delete the backup
+
+    let backup = new Dexie("breadboard_backup")
+    backup.version(1).stores({
+      settings: "key, val",
+      folders: "&name",
+      favorites: "query"
+    })
+
+
+    let favorites = await backup.favorites.toArray()
+    console.log("favorites", favorites)
+    if (favorites && favorites.length > 0) {
+
+      // recover backup
+      await this.db.favorites.bulkPut(favorites)
+
+      // clear the DB if backup was fully recovered
+      await backup.favorites.clear()
+
+    }
+
+    let settings = await backup.settings.toArray()
+    console.log("settings", settings)
+    if (settings && settings.length > 0) {
+
+      // recover backup
+      await this.db.settings.bulkPut(settings)
+
+      // clear the DB if backup was fully recovered
+      await backup.settings.clear()
+
+    }
+
+    let folders = await backup.folders.toArray()
+    if (folders && folders.length > 0) {
+      // recover backup
+      await this.db.folders.bulkPut(folders)
+
+      // clear the DB if backup was fully recovered
+      await backup.folders.clear()
+    }
+
+    await backup.delete()
   }
   async persist() {
     if (!navigator.storage || !navigator.storage.persisted) {

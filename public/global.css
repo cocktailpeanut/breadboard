@@ -46,7 +46,7 @@ body {
   background: white;
   box-sizing: border-box;
   align-items: flex-start;
-  border: 1px solid rgba(0,0,0,0.1);
+  border-bottom: 1px solid rgba(0,0,0,0.1);
 
   overflow-wrap: break-word;
   word-wrap: break-word;
@@ -737,7 +737,7 @@ body.dark nav input {
 body.dark .card {
   background: rgba(255,255,255,0.05);
   color: rgba(255,255,255,0.8);
-  border: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 body.dark .card td {
   border-top: 1px solid rgba(255,255,255,0.03);

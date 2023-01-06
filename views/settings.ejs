@@ -36,16 +36,37 @@
     <script src="./dexie.js"></script>
     <script>
     let db;
+    let backup;
     const VERSION = "<%=version%>"
     const init_db = async () => {
       db = new Dexie("breadboard")
       db.version(1).stores({
-        files: "file_path, agent, model_name, root_path, prompt, btime, mtime, *tokens",
+        files: "file_path, agent, model_name, root_path, prompt, btime, mtime, width, height, *tokens",
         folders: "&name",
         checkpoints: "&root_path, btime",
         settings: "key, val",
         favorites: "query"
       })
+    }
+    const run_backup = async () => {
+      backup = new Dexie("breadboard_backup")
+      backup.version(1).stores({
+        settings: "key, val",
+        folders: "&name",
+        favorites: "query"
+      })
+
+      // backup favorites
+      let favorited = await db.favorites.toArray()
+      await backup.favorites.bulkPut(favorited)
+
+      // backup settings
+      let settings = await db.settings.toArray()
+      await backup.settings.bulkPut(settings)
+
+      // backup folders
+      let folders = await db.folders.toArray()
+      await backup.folders.bulkPut(folders)
     }
     const init_theme = async () => {
       let theme = await db.settings.where({ key: "theme" }).first()
@@ -125,7 +146,7 @@
       </div>
       <div class='rows'>
         <div class='row'>
-          <button id='reindex'><i class="fa-solid fa-rotate"></i> Fresh Re-index All</button>
+          <button id='reindex'><i class="fa-solid fa-rotate"></i> Re-index from Scratch</button>
         </div>
       </div>
     </main>`
@@ -139,6 +160,7 @@
         await db.settings.put({ key: "zoom", val: e.target.value })
         e.target.closest(".rows").querySelector(".currentZoom").innerHTML = "" + e.target.value + "%"
       })
+      /*
       document.querySelector("#reindex").addEventListener("click", async (e) => {
         e.preventDefault()
         e.stopPropagation()
@@ -146,10 +168,24 @@
         await db.checkpoints.clear()
         location.href = "/?synchronize=reindex"
       })
+      */
       document.querySelector("#reindex2").addEventListener("click", async (e) => {
         e.preventDefault()
         e.stopPropagation()
         location.href = "/?synchronize=default"
+      })
+      document.querySelector("#reindex").addEventListener("click", async (e) => {
+        e.preventDefault()
+        e.stopPropagation()
+
+        // 1. back up favorites and settings to backup storage
+        await run_backup()
+
+        // 2. Delete the DB
+        await db.delete()
+
+        // 3. Send to reindex (the home page will read the localStorage to automatically fill the favorites and settings DB after reindexing)
+        location.href = "/?synchronize=reindex"
       })
       document.querySelector("#select").addEventListener('click', async (e) => {
         e.preventDefault()
