@@ -59,6 +59,12 @@ const card = (meta) => {
         els.push(`<span class='token' data-value="${token}">${token}</span>`)
       }
       el = els.join("/")
+    } else if (attr.key === "width" || attr.key === "height") {
+      el = `<span class='token' data-value="${attr.val}">${attr.val}</span>
+<span class='btn token' data-op = "-" data-value="${attr.val}">&lt;</span>
+<span class='btn token' data-op = "-=" data-value="${attr.val}">&lt;=</span>
+<span class='btn token' data-op = "+=" data-value="${attr.val}">=&gt;</span>
+<span class='btn token' data-op = "+" data-value="${attr.val}">&gt;</span>`
     } else {
       el = attr.val
     }

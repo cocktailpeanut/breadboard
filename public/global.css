@@ -176,7 +176,22 @@ body {
 .card td span.token {
   cursor: pointer;
   color: royalblue;
+  /*
   text-decoration: underline;
+  */
+}
+.card td span.token.btn {
+  background: black;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px 10px;
+  display: inline-block;
+  font-size: 0.8rem;
+  margin: 0;
+  font-family: Menlo, monaco, monospace;
+  /*
+  font-size: 12px;
+  */
 }
 .card h4 {
   padding: 0px 10px;

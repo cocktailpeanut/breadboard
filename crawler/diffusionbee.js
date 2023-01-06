@@ -140,6 +140,12 @@ class Diffusionbee {
           }, {
             key: 'xmp:agent',
             val: "diffusionbee"
+          }, {
+            key: 'xmp:width',
+            val: m.img_w
+          }, {
+            key: 'xmp:height',
+            val: m.img_h
           }]
           await this.gm.set(filename, list)
         }

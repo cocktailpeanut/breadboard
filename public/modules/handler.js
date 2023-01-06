@@ -103,11 +103,19 @@ class Handler {
       } else if (tokenTarget && e.target.closest(".card.expanded")) {
         let key = tokenTarget.closest("tr").getAttribute("data-key")
         let val = tokenTarget.getAttribute("data-value")
+
+
         if (key === "file_path" || key === "model_name" || key === "agent") {
           if (val.split(" ").length > 1) {
             val = `"${val}"`
           }
         }
+
+        let opcode = tokenTarget.getAttribute("data-op")
+        if (opcode && opcode.length > 0) {
+          key = opcode + key
+        }
+
         this.app.navbar.input(key, val)
       } else if (tagTarget && e.target.closest(".card.expanded")) {
         let tag = tagTarget.getAttribute("data-tag")

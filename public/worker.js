@@ -19,6 +19,46 @@ function applyFilter(q, filters) {
         q = q.and("btime").belowOrEqual(new Date(filter.before).getTime())
       } else if (filter.after) {
         q = q.and("btime").aboveOrEqual(new Date(filter.after).getTime())
+      } else if (filter.width) {
+        q = q.and((item) => {
+          return item.width === parseInt(filter.width)
+        })
+      } else if (filter.height) {
+        q = q.and((item) => {
+          return item.height === parseInt(filter.height)
+        })
+      } else if (filter["+width"]) {
+        q = q.and((item) => {
+          return item.width > parseInt(filter["+width"])
+        })
+      } else if (filter["+height"]) {
+        q = q.and((item) => {
+          return item.height > parseInt(filter["+height"])
+        })
+      } else if (filter["-width"]) {
+        q = q.and((item) => {
+          return item.width < parseInt(filter["-width"])
+        })
+      } else if (filter["-height"]) {
+        q = q.and((item) => {
+          return item.height < parseInt(filter["-height"])
+        })
+      } else if (filter["+=width"]) {
+        q = q.and((item) => {
+          return item.width >= parseInt(filter["+=width"])
+        })
+      } else if (filter["+=height"]) {
+        q = q.and((item) => {
+          return item.height >= parseInt(filter["+=height"])
+        })
+      } else if (filter["-=width"]) {
+        q = q.and((item) => {
+          return item.width <= parseInt(filter["-=width"])
+        })
+      } else if (filter["-=height"]) {
+        q = q.and((item) => {
+          return item.height <= parseInt(filter["-=height"])
+        })
       } else if (filter.model_name) {
         q = q.and((item) => {
           return new RegExp(esc(filter.model_name), "i").test(item.model_name)
@@ -158,6 +198,46 @@ function find (phrase) {
     } else if (prefix.startsWith("file_path:")) {
       filters.push({
         file_path: prefix.replace("file_path:", "").trim()
+      })
+    } else if (prefix.startsWith("width:")) {
+      filters.push({
+        width: prefix.replace("width:", "").trim()
+      })
+    } else if (prefix.startsWith("height:")) {
+      filters.push({
+        height: prefix.replace("height:", "").trim()
+      })
+    } else if (prefix.startsWith("-width:")) {
+      filters.push({
+        "-width": prefix.replace("-width:", "").trim()
+      })
+    } else if (prefix.startsWith("-height:")) {
+      filters.push({
+        "-height": prefix.replace("-height:", "").trim()
+      })
+    } else if (prefix.startsWith("+width:")) {
+      filters.push({
+        "+width": prefix.replace("+width:", "").trim()
+      })
+    } else if (prefix.startsWith("+height:")) {
+      filters.push({
+        "+height": prefix.replace("+height:", "").trim()
+      })
+    } else if (prefix.startsWith("+=width:")) {
+      filters.push({
+        "+=width": prefix.replace("+=width:", "").trim()
+      })
+    } else if (prefix.startsWith("+=height:")) {
+      filters.push({
+        "+=height": prefix.replace("+=height:", "").trim()
+      })
+    } else if (prefix.startsWith("-=width:")) {
+      filters.push({
+        "-=width": prefix.replace("-=width:", "").trim()
+      })
+    } else if (prefix.startsWith("-=height:")) {
+      filters.push({
+        "-=height": prefix.replace("-=height:", "").trim()
       })
     } else {
       tokens.push(prefix)
