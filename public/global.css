@@ -414,14 +414,14 @@ nav button#favorite {
   margin-right: 5px;
   text-decoration: none;
 }
-.settings .del {
+/*
+.settings button {
   border: none;
-  background: none !important;
-  color: red;
   cursor: pointer;
   padding: 0;
   margin-right: 10px;
 }
+*/
 
 footer button {
   border: none;
@@ -716,9 +716,11 @@ body.dark .settings, body.dark .favorites, body.dark .help {
 body.dark main .item {
   color: white;
 }
+/*
 body.dark .settings .del {
   color: red;
 }
+*/
 body.dark .settings button, body.dark .settings .btn, body.dark .favorites button, body.dark .favorites .btn {
   background: rgba(255,255,255,0.05);
   color: rgba(255,255,255,0.9);
