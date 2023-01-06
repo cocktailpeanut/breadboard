@@ -32,6 +32,22 @@ class Navbar {
       direction: -1,
       column: "prompt",
       compare: 1, // alphabetical compare
+    }, {
+      direction: -1,
+      column: "width",
+      compare: 0, // numeric compare
+    }, {
+      direction: 1,
+      column: "width",
+      compare: 0, // numeric compare
+    }, {
+      direction: -1,
+      column: "height",
+      compare: 0, // numeric compare
+    }, {
+      direction: 1,
+      column: "height",
+      compare: 0, // numeric compare
     }]
     this.sorter = this.sorters[this.app.sorter_code]
     this.sorter_code = parseInt(this.app.sorter_code)

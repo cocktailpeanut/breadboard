@@ -270,7 +270,10 @@ addEventListener("message", async event => {
     res = await find(query, sorter)
     if (sorter.direction > 0) {
       if (sorter.compare === 0) {
-        res.sort((x, y) => { return x[sorter.column] - y[sorter.column] })
+        res.sort((x, y) => {
+          console.log(x[sorter.column], y[sorter.column], x.file_path, y.file_path)
+          return x[sorter.column] - y[sorter.column]
+        })
       } else if (sorter.compare === 1) {
         res.sort((x, y) => {
           let xx = (x[sorter.column] && typeof x[sorter.column] === 'string' ? x[sorter.column] : "")
@@ -280,7 +283,9 @@ addEventListener("message", async event => {
       }
     } else if (sorter.direction < 0) {
       if (sorter.compare === 0) {
-        res.sort((x, y) => { return y[sorter.column] - x[sorter.column] })
+        res.sort((x, y) => {
+          return y[sorter.column] - x[sorter.column]
+        })
       } else if (sorter.compare === 1) {
         res.sort((x, y) => {
           let xx = (x[sorter.column] && typeof x[sorter.column] === 'string' ? x[sorter.column] : "")

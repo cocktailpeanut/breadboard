@@ -520,6 +520,9 @@ footer .tag-menu-items > div {
   color: rgba(255,255,255,0.9);
 }
 
+.ts-dropdown-content {
+  max-height: none !important;
+}
 
 footer #cancel-selection {
   background: none;
