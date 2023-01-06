@@ -73,13 +73,8 @@ class App {
     let tokens = []
     let wordSet = {}
     if (o.prompt && typeof o.prompt === 'string' && o.prompt.length > 0) {
-      let p = this.domparser.parseFromString(o.prompt, "text/html").documentElement.textContent;
-
-      wordSet = this.stripPunctuation(p).split(' ')
-//      .map((x) => {
-//        return this.stripPunctuation(x)
-//      })
-      .reduce(function (prev, current) {
+      let p = this.domparser.parseFromString(o.prompt, "text/html").documentElement.textContent;    // Escape XML-unsafe characters
+      wordSet = this.stripPunctuation(p).split(' ').reduce(function (prev, current) {
         if (current.length > 0) prev[current] = true;
         return prev;
       }, {});

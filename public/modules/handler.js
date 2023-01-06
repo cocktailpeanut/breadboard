@@ -11,7 +11,6 @@ class Handler {
     this.app = app
     let id;
     window.addEventListener('resize', () => {
-      console.log("ree")
       clearTimeout(id);
       id = setTimeout(this.resized, 500);
     });
@@ -46,7 +45,6 @@ class Handler {
       } else if (openFileTarget) {
         window.electronAPI.open(openFileTarget.getAttribute("data-src"))
       } else if (favoriteFileTarget) {
-        console.log("favoriteFileTarget", favoriteFileTarget)
         let data_favorited = favoriteFileTarget.getAttribute("data-favorited")
         let is_favorited = (data_favorited === "true" ? true : false)
         let src = favoriteFileTarget.getAttribute("data-src")
@@ -105,8 +103,10 @@ class Handler {
       } else if (tokenTarget && e.target.closest(".card.expanded")) {
         let key = tokenTarget.closest("tr").getAttribute("data-key")
         let val = tokenTarget.getAttribute("data-value")
-        if (key === "file_path" || key === "model_name") {
-          val = `"${val}"`
+        if (key === "file_path" || key === "model_name" || key === "agent") {
+          if (val.split(" ").length > 1) {
+            val = `"${val}"`
+          }
         }
         this.app.navbar.input(key, val)
       } else if (tagTarget && e.target.closest(".card.expanded")) {
