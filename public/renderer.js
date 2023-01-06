@@ -99,7 +99,7 @@ class App {
     } else {
       let cp = await this.db.checkpoints.where({ root_path: o.root_path }).first()   
       if (cp) {
-        if (cp < o.btime) {
+        if (cp && cp.btime < o.btime) {
           await this.updateCheckpoint(o.root_path, o.btime)
         }
       } else {
