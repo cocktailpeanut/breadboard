@@ -1,3 +1,4 @@
+const exifr = require('exifr')
 const meta = require('png-metadata')
 const { XMLParser, XMLBuilder, XMLValidator} = require("fast-xml-parser")
 const fs = require('fs')
@@ -178,6 +179,8 @@ class GM {
       let parsed = this.parser.parse(itxt.data)
       let gms = parsed["x:xmpmeta"]["rdf:RDF"]["rdf:Description"]["xmp:gm"]
       let subject = parsed["x:xmpmeta"]["rdf:RDF"]["rdf:Description"]["dc:subject"]
+
+
       let keys = [
         "xmp:prompt",
         "xmp:sampler",
@@ -191,6 +194,8 @@ class GM {
         "xmp:width",
         "xmp:height",
       ]
+
+      // xmp:prompt ~ xmp:agent
       let res = []
       if (gms) {
         for(let key of keys) {
@@ -202,6 +207,21 @@ class GM {
           }
         }
       }
+
+      // xmp:width xmp:height => directly get it from the file
+      let ex = await exifr.parse(buf, true)
+      if (ex) {
+        res.push({
+          key: "xmp:width",
+          val: parseInt(ex.ImageWidth)
+        })
+        res.push({
+          key: "xmp:height",
+          val: parseInt(ex.ImageHeight)
+        })
+      }
+
+      // dc:subject
       if (subject) {
         let val = subject["rdf:Bag"]["rdf:li"]
         if (val) {
