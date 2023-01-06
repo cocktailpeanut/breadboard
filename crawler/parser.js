@@ -18,7 +18,7 @@ class Parser {
     } else if (parsed.parameters) {
       app = "automatic1111"
     }
-    let meta = this.getMeta(parsed)
+    let meta = this.getMeta(parsed, attrs)
     for(let key in meta) {
       if (typeof meta[key] === "string") {
         meta[key] = escapeHtml(meta[key])
@@ -281,7 +281,7 @@ class Parser {
       return parsed.parameters.split("\n")[0]
     }
   }
-  getMeta(parsed) {
+  getMeta(parsed, attr) {
     if (parsed["sd-metadata"]) {
       let p = JSON.parse(parsed["sd-metadata"])
       let image = p.image
@@ -289,6 +289,10 @@ class Parser {
       let _prompt = image.prompt[0]
       image.prompt = _prompt.prompt
       image.weight = _prompt.weight
+      if (attr) {
+        if (attr.width) image.width = parseInt(attr.width)
+        if (attr.height) image.height = parseInt(attr.height)
+      }
       return { ...image, ...p, }
     } else if (parsed.parameters) {
       let re = /([^:]+):([^:]+)(,|$|\n)/g
@@ -305,6 +309,10 @@ class Parser {
         attrs[kv.key] = kv.val
       }
       attrs.prompt = this.getPrompt(parsed)
+      if (attr) {
+        if (attr.width) attrs.width = parseInt(attr.width)
+        if (attr.height) attrs.height = parseInt(attr.height)
+      }
       return attrs
     }
   }
