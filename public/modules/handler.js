@@ -37,6 +37,17 @@ class Handler {
         if (this.viewer) this.viewer.destroy()
         this.viewer = new Viewer(img, {
           transition: false,
+          toolbar: {
+            'zoomIn': true,
+            'zoomOut': true,
+            'reset': true,
+            'play': true,
+            'oneToOne': true,
+            'rotateLeft': true,
+            'rotateRight': true,
+            'flipHorizontal': true,
+            'flipVertical': true
+          },
           viewed() {
             this.viewer.zoomTo(scaleFactor)
           },
