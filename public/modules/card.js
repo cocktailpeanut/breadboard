@@ -75,7 +75,7 @@ const card = (meta) => {
 
   let favClass = (is_favorited ? "fa-solid fa-heart" : "fa-regular fa-heart")
 
-  return `<div class='grab'>
+  return `<div class='grab' draggable='true'>
   <button class='gofullscreen'><i class="fa-solid fa-expand"></i></button>
   <button data-src="${meta.file_path}" class='open-file'><i class="fa-solid fa-up-right-from-square"></i></button>
   <button data-favorited="${is_favorited}" data-src="${meta.file_path}" class='favorite-file'><i class="${favClass}"></i></button>

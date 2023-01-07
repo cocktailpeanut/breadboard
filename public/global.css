@@ -447,7 +447,7 @@ footer button {
 }
 .ds-selected {
   outline: 3px solid black;
-  outline-offset: 3px;
+  outline-offset: -3px;
 }
 footer {
   position: fixed;
@@ -598,7 +598,7 @@ body.default footer {
 }
 body.default .ds-selected {
   outline: 3px solid cornflowerblue;
-  outline-offset: 3px;
+  outline-offset: -3px;
 }
 /*
 body.default .card .grab:hover {
@@ -726,7 +726,7 @@ body.dark .tagger-new input {
 }
 body.dark .ds-selected {
   outline: 3px solid cornflowerblue;
-  outline-offset: 3px;
+  outline-offset: -3px;
 }
 body.dark .settings, body.dark .favorites, body.dark .help {
   color: rgba(255,255,255,0.9);
