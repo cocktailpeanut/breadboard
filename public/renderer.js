@@ -269,7 +269,7 @@ class App {
         await cb()
       }
     } else {
-      if (this.sync_mode === "reindex" || this.sync_mode === "default") {
+      if (this.sync_mode === "reindex" || this.sync_mode === "default" || this.sync_mode === "false") {
         let folderpaths = await this.db.folders.toArray()
         for(let folderpath of folderpaths) {
           let root_path = folderpath.name
@@ -343,7 +343,7 @@ class App {
     document.querySelector(".container").classList.remove("hidden")
     document.querySelector(".status").innerHTML = "Loading..."
     let data = items.map((item) => {
-      return `<div class='card' data-root="${item.root_path}" data-src="${item.file_path}">${card(item)}</div>`
+      return `<div class='card' data-root="${item.root_path}" data-src="${item.file_path}">${card(item, this.stripPunctuation)}</div>`
     })
     this.clusterize = new Clusterize({
       rows: data,
@@ -383,8 +383,10 @@ class App {
     location.href = "/?" + params.toString()
   }
   stripPunctuation (str) {
-//    return str.replace(/(^[^\p{L}\s]|[^\p{L}\s]$)/gu,"")
-    return str.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()+]/g, " ").replace(/\s{2,}/g, " ");
+    return str
+      .replaceAll("&quot;", " ")
+      .replace(/[.,\/#!$%\^&\*;:\[\]{}=\-_`"~()\\\|+]/g, " ")
+      .replace(/\s{2,}/g, " ");
   }
 
 }

@@ -82,6 +82,23 @@ class Parser {
 
     const x = {}
 
+    if (options && options.agent) {
+      x["xmp:agent"] = options.agent
+    } else if (e.agent) {
+      x["xmp:agent"] = e.agent
+    } else if (e.Agent) {
+      x["xmp:agent"] = e.Agent
+    } else if (e.app) {
+      if (e.app === "invokeai") {
+        if (e.app_id && e.app_version) {
+          x["xmp:agent"] = `${e.app_id}`// ${e.app_version}`
+        }
+      } else if (e.app === "automatic1111") {
+        x["xmp:agent"] = "automatic1111"
+      }
+    }
+
+
     if (options && options.width) {
       x["xmp:width"] = parseInt(options.width)
     } else if (e.width) {
@@ -118,15 +135,27 @@ class Parser {
     } else if (e["Negative prompt"]) {
       x["xmp:negative_prompt"] = e["Negative prompt"]
     } else {
-      // test for invokeAI negative prompt syntax
-      if (e.prompt && typeof e.prompt === "string" ) {
-        let matches = [...e.prompt.matchAll(/\[([^\]]+)\]/g)].map((m) => {
-          return m[1]
-        })
-        if (matches.length > 0) {
-          x["xmp:negative_prompt"] = matches.join(", ")
-          x["xmp:prompt"] = e.prompt.replaceAll(/\[([^\]]+)\]/g, "").trim()
+      // invokeai does negative prompts differently (included in the prompt), so need to parse the prompt to extract negative prompts
+      if (/invoke/gi.test(x["xmp:agent"])) {
+        // test for invokeAI negative prompt syntax
+        let negative_chunks = []
+        let positive_chunks = []
+        for(let chunk of e.prompt) {
+          if (chunk.prompt && typeof chunk.prompt === "string") {
+            let matches = [...chunk.prompt.matchAll(/\[([^\]]+)\]/g)].map((m) => {
+              return m[1]
+            })
+            if (matches.length > 0) {
+              negative_chunks = negative_chunks.concat(matches) 
+            }
+            let positive = chunk.prompt.replaceAll(/\[[^\]]+\]/g, "").trim()
+            positive_chunks.push(positive)
+          }
         }
+        if (negative_chunks.length > 0) {
+          x["xmp:negative_prompt"] = escapeHtml(negative_chunks.join(", "))
+        }
+        x["xmp:prompt"] = escapeHtml(positive_chunks.join(" "))
       }
     }
 
@@ -167,23 +196,6 @@ class Parser {
     } else if (e.model_url) {
       x["xmp:model_url"] = e.model_url
     }
-
-    if (options && options.agent) {
-      x["xmp:agent"] = options.agent
-    } else if (e.agent) {
-      x["xmp:agent"] = e.agent
-    } else if (e.Agent) {
-      x["xmp:agent"] = e.Agent
-    } else if (e.app) {
-      if (e.app === "invokeai") {
-        if (e.app_id && e.app_version) {
-          x["xmp:agent"] = `${e.app_id} ${e.app_version}`
-        }
-      } else if (e.app === "automatic1111") {
-        x["xmp:agent"] = "automatic1111"
-      }
-    }
-
 
     if (options && options.subject) {
       x["dc:subject"] = options.subject
@@ -278,7 +290,7 @@ class Parser {
     if (parsed.Dream) {
       return parsed.Dream.match(/^".*"/g)[0]
     } else if (parsed.parameters) {
-      return parsed.parameters.split("\n")[0]
+      return parsed.parameters.split("\n").slice(0, -1).join(" ")
     }
   }
   getMeta(parsed, attr) {
@@ -286,9 +298,6 @@ class Parser {
       let p = JSON.parse(parsed["sd-metadata"])
       let image = p.image
       delete p.image
-      let _prompt = image.prompt[0]
-      image.prompt = _prompt.prompt
-      image.weight = _prompt.weight
       if (attr) {
         if (attr.width) image.width = parseInt(attr.width)
         if (attr.height) image.height = parseInt(attr.height)

@@ -219,7 +219,7 @@ body {
   cursor: pointer;
 }
 .card .col {
-  padding: 10px 0;
+  padding: 10px;
   box-sizing: border-box;
 }
 .card:not(.expanded) .col {

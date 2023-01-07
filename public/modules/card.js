@@ -1,4 +1,4 @@
-const card = (meta) => {
+const card = (meta, stripPunctuation) => {
   let attributes = Object.keys(meta).map((key) => {
     return { key, val: meta[key] }
   })
@@ -43,7 +43,7 @@ const card = (meta) => {
       attr.key = "tags"
     } else if (attr.key === "prompt" && attr.val) {
       if (attr.val && typeof attr.val === "string" && attr.val.length > 0) {
-        let tokens = attr.val.split(" ").filter(x => x.length > 0)
+        let tokens = stripPunctuation(attr.val).split(/\s/)
         let els = []
         for(let token of tokens) {
           els.push(`<span class='token' data-value="${token}">${token}</span>`)
