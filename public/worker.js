@@ -60,9 +60,14 @@ function applyFilter(q, filters) {
           return item.height <= parseInt(filter["-=height"])
         })
       } else if (filter["-tag"]) {
-        let tag = filter["-tag"].slice(1).toLowerCase()
+        let tag = filter["-tag"].slice(1).toLowerCase()   // gotta strip off the "-" to get only the "tag:..."
         q = q.and((item) => {
           return !item.tokens.map(x => x.toLowerCase()).includes(tag)
+        })
+      } else if (filter["-"]) {
+        let token = filter["-"].slice(2).toLowerCase()   // gotta strip off the -: to get only the keyword
+        q = q.and((item) => {
+          return !item.tokens.map(x => x.toLowerCase()).includes(token)
         })
       } else if (filter.model_name) {
         q = q.and((item) => {
@@ -86,7 +91,7 @@ function applyFilter(q, filters) {
 const preprocess_query = (phrase) => {
   let fp_re = /file_path:"(.+)"/g
   let mn_re = /model_name:"(.+)"/g
-  let tag_re = /(-?tag:)"([^"]+)"/g
+  let tag_re = /(-?(tag)?:)"([^"]+)"/g
   let agent_re = /agent:"([^"]+)"/g
   let fp_placeholder = "file_path:" + Date.now()
   let mn_placeholder = "model_name:" + Date.now()
@@ -121,15 +126,16 @@ const preprocess_query = (phrase) => {
   while(true) {
     let test = tag_re.exec(phrase)
     if (test) {
-      let captured = test[2]
+      let captured = test[3]
       let tag_placeholder = test[1] + Math.floor(Math.random() * 100000)
+      console.log("tag_placeholder", tag_placeholder)
       to_replace.push(tag_placeholder)
       tag_captured[tag_placeholder] = captured
     } else {
       break;
     }
   }
-  let tag_re2 = /-?tag:"([^"]+)"/
+  let tag_re2 = /-?(tag)?:"([^"]+)"/
   for(let tag_placeholder of to_replace) {
     phrase = phrase.replace(tag_re2, tag_placeholder)
   }
@@ -157,7 +163,13 @@ const preprocess_query = (phrase) => {
       }
     } else if (prefix.startsWith("-tag:")) {
       if (tag_captured[prefix]) {
-        converted.push("-tag:" + prefix.replace(/tag:[0-9]+/, tag_captured[prefix]))
+        converted.push("-tag:" + prefix.replace(/-tag:[0-9]+/, tag_captured[prefix]))
+      } else {
+        converted.push(prefix)
+      }
+    } else if (prefix.startsWith("-:")) {
+      if (tag_captured[prefix]) {
+        converted.push("-:" + prefix.replace(/-:[0-9]+/, tag_captured[prefix]))
       } else {
         converted.push(prefix)
       }
@@ -251,9 +263,9 @@ function find (phrase) {
         "-=height": prefix.replace("-=height:", "").trim()
       })
     } else if (prefix.startsWith("-tag:")) {
-      filters.push({
-        "-tag": prefix
-      })
+      filters.push({ "-tag": prefix })
+    } else if (prefix.startsWith("-:")) {
+      filters.push({ "-": prefix })
     } else {
       tokens.push(prefix)
     }
@@ -264,6 +276,8 @@ function find (phrase) {
     if (tokens.length > 0) {
       promises = tokens.map((token) => {
         if (token.startsWith("-tag:")) {
+          return applyFilter(db.files.toCollection(), filters)
+        } else if (token.startsWith("-:")) {
           return applyFilter(db.files.toCollection(), filters)
         } else {
           let q = db.files.where('tokens').startsWithIgnoreCase(token)
