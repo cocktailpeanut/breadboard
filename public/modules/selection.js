@@ -93,6 +93,13 @@ class Selection {
         }
       }
     })
+    hotkeys("ctrl+a,cmd+a", (e) => {
+      e.preventDefault()
+      e.stopPropagation()
+      this.els = Array.from(document.querySelectorAll(".card"))
+      this.ds.setSelection(this.els)
+      this.update(this.els)
+    })
     document.querySelector(".container").ondragstart = (event) => {
       event.preventDefault()
       event.stopPropagation()
@@ -101,13 +108,11 @@ class Selection {
       let dragging = this.ds.isDragging(event)
       if (this.els.length > 0) {
         if (this.els.includes(draggingTarget)) {
-          if (dragging) {
-            let filenames = this.els.map((el) => {
-              return el.querySelector("img").getAttribute("data-src")
-            })
-            this.ds.setSelection(this.els)
-            window.electronAPI.startDrag(filenames)
-          }
+          let filenames = this.els.map((el) => {
+            return el.querySelector("img").getAttribute("data-src")
+          })
+          this.ds.setSelection(this.els)
+          window.electronAPI.startDrag(filenames)
         } else {
           if (!multiselecting) {
             this.ds.setSelection([draggingTarget])
@@ -116,6 +121,7 @@ class Selection {
         }
       }
     }
+
     document.querySelector("#cancel-selection").addEventListener("click", async (e) => {
       this.ds.setSelection([])
       this.update([])
@@ -221,6 +227,7 @@ class Selection {
         draggability: false,
       });
       this.ds.subscribe('callback', async (e) => {
+        console.log("callback", e)
         if (e.items && e.items.length > 0) {
           // reset tags
           this.update(e.items)
@@ -229,6 +236,9 @@ class Selection {
           document.querySelector("footer").classList.add("hidden")
         }
       });
+      this.ds.subscribe("dragstart", (e) => {
+        console.log("#dragselect dragstart", e)
+      })
     }
   }
   async del() {

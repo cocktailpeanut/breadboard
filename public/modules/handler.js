@@ -104,7 +104,6 @@ class Handler {
         favoriteFileTarget.querySelector("i").className = favClass
 
         await this.app.synchronize([{ file_path: src, root_path: root }], async () => {
-          console.log("done")
           document.querySelector(".status").innerHTML = ""
           document.querySelector("#sync").classList.remove("disabled")
           document.querySelector("#sync").disabled = false
