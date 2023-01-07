@@ -230,6 +230,7 @@ class App {
     this.theme = await this.db.settings.where({ key: "theme" }).first()
     if (!this.theme) this.theme = { val: "default" }
     document.body.className = this.theme.val
+    document.querySelector("html").className = this.theme.val
     window.electronAPI.theme(this.theme.val)
   }
   init_worker () {

@@ -74,6 +74,7 @@
       let theme = await db.settings.where({ key: "theme" }).first()
       if (!theme) theme = { val: "default" }
       document.body.className = theme.val
+      document.querySelector("html").className = theme.val
       window.electronAPI.theme(theme.val)
     }
     const search = (query) => {

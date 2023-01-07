@@ -16,6 +16,7 @@ const gm = new GM()
 const is_mac = process.platform.startsWith("darwin")
 contextMenu({ showSaveImageAs: true });
 var mainWindow;
+var theme = "default";
 const updater = new Updater()
 const titleBarOverlay = (theme) => {
   if (is_mac) {
@@ -118,20 +119,23 @@ app.whenReady().then(async () => {
       sync_mode,
       sync_folder,
       need_update,
-      current_sorter_code
+      current_sorter_code,
+      theme
     })
     if (default_sync_mode) default_sync_mode = false   // disable sync after the first time at launch
   })
   server.get("/settings", (req, res) => {
     res.render("settings", {
       platform: process.platform,
-      version: VERSION
+      version: VERSION,
+      theme
     })
   })
   server.get("/favorites", (req, res) => {
     res.render("favorites", {
       platform: process.platform,
-      version: VERSION
+      version: VERSION,
+      theme
     })
   })
   server.get("/help", (req, res) => {
@@ -154,7 +158,8 @@ app.whenReady().then(async () => {
     res.render("help", {
       items,
       platform: process.platform,
-      version: VERSION
+      version: VERSION,
+      theme
     })
   })
   server.get('/file', (req, res) => {
@@ -255,7 +260,8 @@ app.whenReady().then(async () => {
       }
     }
   })
-  ipcMain.handle("theme", (event, theme) => {
+  ipcMain.handle("theme", (event, _theme) => {
+    theme = _theme
     if (mainWindow.setTitleBarOverlay) {
       mainWindow.setTitleBarOverlay(titleBarOverlay(theme))
     }
