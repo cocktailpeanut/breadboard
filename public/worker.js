@@ -82,6 +82,10 @@ function applyFilter(q, filters) {
         q = q.and((item) => {
           return new RegExp(esc(filter.file_path), "i").test(item.file_path)
         })
+      } else if (filter["-file_path"]) {
+        q = q.and((item) => {
+          return !new RegExp(esc(filter["-file_path"]), "i").test(item.file_path)
+        })
       }
     }
   }
@@ -89,20 +93,30 @@ function applyFilter(q, filters) {
 }
 
 const preprocess_query = (phrase) => {
-  let fp_re = /file_path:"(.+)"/g
-  let mn_re = /model_name:"(.+)"/g
+  let fp_re = /(-?(file_path)?:)"([^"]+)"/g
+  let mn_re = /model_name:"([^"]+)"/g
   let tag_re = /(-?(tag)?:)"([^"]+)"/g
   let agent_re = /agent:"([^"]+)"/g
-  let fp_placeholder = "file_path:" + Date.now()
   let mn_placeholder = "model_name:" + Date.now()
   let agent_placeholder = "agent:" + Date.now()
 
   // file_path capture
-  let test = fp_re.exec(phrase)
-  let fp_captured
-  if (test && test.length > 1) {
-    phrase = phrase.replace(fp_re, fp_placeholder)
-    fp_captured = test[1]
+  let fp_captured = {}
+  let file_path_to_replace = []
+  while(true) {
+    let test = fp_re.exec(phrase)
+    if (test) {
+      let captured = test[3]
+      let fp_placeholder = test[1] + Math.floor(Math.random() * 100000)
+      file_path_to_replace.push(fp_placeholder)
+      fp_captured[fp_placeholder] = captured
+    } else {
+      break;
+    }
+  }
+  let fp_re2 = /-?(file_path)?:"([^"]+)"/
+  for(let placeholder of file_path_to_replace) {
+    phrase = phrase.replace(fp_re2, placeholder)
   }
 
   // model_name capture
@@ -128,7 +142,6 @@ const preprocess_query = (phrase) => {
     if (test) {
       let captured = test[3]
       let tag_placeholder = test[1] + Math.floor(Math.random() * 100000)
-      console.log("tag_placeholder", tag_placeholder)
       to_replace.push(tag_placeholder)
       tag_captured[tag_placeholder] = captured
     } else {
@@ -150,8 +163,14 @@ const preprocess_query = (phrase) => {
         converted.push(prefix)
       }
     } else if (prefix.startsWith("file_path:")) {
-      if (fp_captured) {
-        converted.push("file_path:" + prefix.replace(/file_path:[0-9]+/, fp_captured))
+      if (fp_captured[prefix]) {
+        converted.push("file_path:" + prefix.replace(/file_path:[0-9]+/, fp_captured[prefix]))
+      } else {
+        converted.push(prefix)
+      }
+    } else if (prefix.startsWith("-file_path:")) {
+      if (fp_captured[prefix]) {
+        converted.push("-file_path:" + prefix.replace(/-file_path:[0-9]+/, fp_captured[prefix]))
       } else {
         converted.push(prefix)
       }
@@ -266,6 +285,10 @@ function find (phrase) {
       filters.push({ "-tag": prefix })
     } else if (prefix.startsWith("-:")) {
       filters.push({ "-": prefix })
+    } else if (prefix.startsWith("-file_path:")) {
+      filters.push({
+        "-file_path": prefix.replace("-file_path:", "").trim()
+      })
     } else {
       tokens.push(prefix)
     }
@@ -278,6 +301,8 @@ function find (phrase) {
         if (token.startsWith("-tag:")) {
           return applyFilter(db.files.toCollection(), filters)
         } else if (token.startsWith("-:")) {
+          return applyFilter(db.files.toCollection(), filters)
+        } else if (token.startsWith("-file_path:")) {
           return applyFilter(db.files.toCollection(), filters)
         } else {
           let q = db.files.where('tokens').startsWithIgnoreCase(token)
