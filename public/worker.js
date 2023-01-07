@@ -93,7 +93,7 @@ function applyFilter(q, filters) {
 }
 
 const preprocess_query = (phrase) => {
-  let fp_re = /(-?(file_path)?:)"([^"]+)"/g
+  let complex_re = /(-?(file_path|tag)?:)"([^"]+)"/g
   let mn_re = /model_name:"([^"]+)"/g
   let tag_re = /(-?(tag)?:)"([^"]+)"/g
   let agent_re = /agent:"([^"]+)"/g
@@ -101,56 +101,38 @@ const preprocess_query = (phrase) => {
   let agent_placeholder = "agent:" + Date.now()
 
   // file_path capture
-  let fp_captured = {}
-  let file_path_to_replace = []
+  let complex_captured = {}
+  let to_replace = []
   while(true) {
-    let test = fp_re.exec(phrase)
+    let test = complex_re.exec(phrase)
     if (test) {
       let captured = test[3]
-      let fp_placeholder = test[1] + Math.floor(Math.random() * 100000)
-      file_path_to_replace.push(fp_placeholder)
-      fp_captured[fp_placeholder] = captured
+      let complex_placeholder = test[1] + Math.floor(Math.random() * 100000)
+      to_replace.push(complex_placeholder)
+      complex_captured[complex_placeholder] = captured
     } else {
       break;
     }
   }
-  let fp_re2 = /-?(file_path)?:"([^"]+)"/
-  for(let placeholder of file_path_to_replace) {
-    phrase = phrase.replace(fp_re2, placeholder)
+  let complex_re2 = /-?(file_path|tag)?:"([^"]+)"/
+  for(let placeholder of to_replace) {
+    phrase = phrase.replace(complex_re2, placeholder)
   }
 
   // model_name capture
-  test = mn_re.exec(phrase)
+  let mn_test = mn_re.exec(phrase)
   let mn_captured
-  if (test && test.length > 1) {
+  if (mn_test && mn_test.length > 1) {
     phrase = phrase.replace(mn_re, mn_placeholder)
-    mn_captured = test[1]
+    mn_captured = mn_test[1]
   }
 
   // agent capture
-  test = agent_re.exec(phrase)
+  let agent_test = agent_re.exec(phrase)
   let agent_captured
-  if (test && test.length > 1) {
+  if (agent_test && agent_test.length > 1) {
     phrase = phrase.replace(agent_re, agent_placeholder)
-    agent_captured = test[1]
-  }
-
-  let tag_captured = {}
-  let to_replace = []
-  while(true) {
-    let test = tag_re.exec(phrase)
-    if (test) {
-      let captured = test[3]
-      let tag_placeholder = test[1] + Math.floor(Math.random() * 100000)
-      to_replace.push(tag_placeholder)
-      tag_captured[tag_placeholder] = captured
-    } else {
-      break;
-    }
-  }
-  let tag_re2 = /-?(tag)?:"([^"]+)"/
-  for(let tag_placeholder of to_replace) {
-    phrase = phrase.replace(tag_re2, tag_placeholder)
+    agent_captured = agent_test[1]
   }
 
   let prefixes = phrase.split(" ").filter(x => x && x.length > 0)
@@ -163,32 +145,32 @@ const preprocess_query = (phrase) => {
         converted.push(prefix)
       }
     } else if (prefix.startsWith("file_path:")) {
-      if (fp_captured[prefix]) {
-        converted.push("file_path:" + prefix.replace(/file_path:[0-9]+/, fp_captured[prefix]))
+      if (complex_captured[prefix]) {
+        converted.push("file_path:" + prefix.replace(/file_path:[0-9]+/, complex_captured[prefix]))
       } else {
         converted.push(prefix)
       }
     } else if (prefix.startsWith("-file_path:")) {
-      if (fp_captured[prefix]) {
-        converted.push("-file_path:" + prefix.replace(/-file_path:[0-9]+/, fp_captured[prefix]))
+      if (complex_captured[prefix]) {
+        converted.push("-file_path:" + prefix.replace(/-file_path:[0-9]+/, complex_captured[prefix]))
       } else {
         converted.push(prefix)
       }
     } else if (prefix.startsWith("tag:")) {
-      if (tag_captured[prefix]) {
-        converted.push("tag:" + prefix.replace(/tag:[0-9]+/, tag_captured[prefix]))
+      if (complex_captured[prefix]) {
+        converted.push("tag:" + prefix.replace(/tag:[0-9]+/, complex_captured[prefix]))
       } else {
         converted.push(prefix)
       }
     } else if (prefix.startsWith("-tag:")) {
-      if (tag_captured[prefix]) {
-        converted.push("-tag:" + prefix.replace(/-tag:[0-9]+/, tag_captured[prefix]))
+      if (complex_captured[prefix]) {
+        converted.push("-tag:" + prefix.replace(/-tag:[0-9]+/, complex_captured[prefix]))
       } else {
         converted.push(prefix)
       }
     } else if (prefix.startsWith("-:")) {
-      if (tag_captured[prefix]) {
-        converted.push("-:" + prefix.replace(/-:[0-9]+/, tag_captured[prefix]))
+      if (complex_captured[prefix]) {
+        converted.push("-:" + prefix.replace(/-:[0-9]+/, complex_captured[prefix]))
       } else {
         converted.push(prefix)
       }

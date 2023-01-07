@@ -24,7 +24,7 @@ class Handler {
       let fullscreenTarget = (e.target.classList.contains(".gofullscreen") ? e.target : e.target.closest(".gofullscreen"))
       let clipboardTarget = (e.target.classList.contains(".copy-text") ? e.target : e.target.closest(".copy-text"))
       let tokenTarget = (e.target.classList.contains(".token") ? e.target : e.target.closest(".token"))
-      let tagTarget = (e.target.classList.contains(".tag-item") ? e.target : e.target.closest(".tag-item"))
+      let tokenPopupTarget = (e.target.classList.contains(".popup-link") ? e.target : e.target.closest(".popup-link"))
       let grabTarget = (e.target.classList.contains(".grab") ? e.target : e.target.closest(".grab"))
       let openFileTarget = (e.target.classList.contains(".open-file") ? e.target : e.target.closest(".open-file"))
       let displayMetaTarget = (e.target.classList.contains(".view-xmp") ? e.target : e.target.closest(".view-xmp"))
@@ -114,25 +114,65 @@ class Handler {
         let key = tokenTarget.closest("tr").getAttribute("data-key")
         let val = tokenTarget.getAttribute("data-value")
 
-
+        let popup_items = []
         if (key === "file_path" || key === "model_name" || key === "agent") {
           if (val.split(" ").length > 1) {
             val = `"${val}"`
           }
+          if (key === "file_path") {
+            popup_items = [
+              `<span class='popup-link' data-key='${key}' data-value='${val}'>${val}</span>`,
+              `<span class='popup-link' data-key='-${key}' data-value='${val}'><i class="fa-solid fa-not-equal"></i> ${val}</span>`
+            ]
+          }
         }
 
-        let opcode = tokenTarget.getAttribute("data-op")
-        if (opcode && opcode.length > 0) {
-          key = opcode + key
+        if (key === "prompt") {
+          popup_items = [
+            `<span class='popup-link' data-key='${key}' data-value='${val}'>${val}</span>`,
+            `<span class='popup-link' data-key='-${key}' data-value='${val}'><i class="fa-solid fa-not-equal"></i> ${val}</span>`
+          ]
         }
 
+        if (key === "tags") {
+          console.log({ key , val })
+          if (val.split(" ").length > 1) {
+            val = val.replace(/^tag:(.+)/, 'tag:"$1"')
+          }
+          popup_items = [
+            `<span class='popup-link' data-key='prompt' data-value='${val}'>${val}</span>`,
+            `<span class='popup-link' data-key='-prompt' data-value='-${val}'><i class="fa-solid fa-not-equal"></i> ${val}</span>`
+          ]
+        }
+
+        if (key === "width" || key === "height") {
+          popup_items = [
+            `<span class='popup-link' data-key='-${key}' data-value='${val}'>&lt;</span>`,
+            `<span class='popup-link' data-key='-=${key}' data-value='${val}'>&lt;=</span>`,
+            `<span class='popup-link' data-key='${key}' data-value='${val}'>${val}</span>`,
+            `<span class='popup-link' data-key='+=${key}' data-value='${val}'>=&gt;</span>`,
+            `<span class='popup-link' data-key='+${key}' data-value='${val}'>&gt;</span>`
+          ]
+        }
+
+        if (popup_items.length > 0) {
+          tippy(tokenTarget, {
+            interactive: true,
+  //          placement: "bottom-end",
+            trigger: 'click',
+            content: `<div class='token-popup'>${popup_items.join("")}</div>`,
+            allowHTML: true,
+          }).show();
+        } else {
+          this.app.navbar.input(key, val)
+        }
+
+
+      } else if (tokenPopupTarget) {
+        let key = tokenPopupTarget.getAttribute("data-key")
+        let val = tokenPopupTarget.getAttribute("data-value")
+        console.log({ key , val })
         this.app.navbar.input(key, val)
-      } else if (tagTarget && e.target.closest(".card.expanded")) {
-        let tag = tagTarget.getAttribute("data-tag")
-        if (tag.split(" ").length > 1) {
-          tag = `tag:"${tag.replace('tag:', '')}"`
-        }
-        this.app.navbar.input("prompt", tag)
       } else if (displayMetaTarget) {
         let file_path = displayMetaTarget.getAttribute("data-src")
         let xml = await window.electronAPI.xmp(file_path)

@@ -36,7 +36,7 @@ const card = (meta) => {
         return x.startsWith("tag:")
       }).map((x) => {
         return `<span data-tag="${x}">
-<button data-tag="${x}" class='tag-item'><i class="fa-solid fa-tag"></i> ${x.replace("tag:", "")}</button>
+<button data-value="${x}" class='token tag-item'><i class="fa-solid fa-tag"></i> ${x.replace("tag:", "")}</button>
 </span>`
       })
       el = els.join("")
@@ -60,11 +60,7 @@ const card = (meta) => {
       }
       el = els.join("/")
     } else if (attr.key === "width" || attr.key === "height") {
-      el = `<span class='token' data-value="${attr.val}">${attr.val}</span>
-<span class='btn token' data-op = "-" data-value="${attr.val}">&lt;</span>
-<span class='btn token' data-op = "-=" data-value="${attr.val}">&lt;=</span>
-<span class='btn token' data-op = "+=" data-value="${attr.val}">=&gt;</span>
-<span class='btn token' data-op = "+" data-value="${attr.val}">&gt;</span>`
+      el = `<span class='token' data-value="${attr.val}">${attr.val}</span>`
     } else {
       el = attr.val
     }

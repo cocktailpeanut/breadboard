@@ -417,6 +417,17 @@ nav button#favorite {
   display: flex;
   align-items: center;
 }
+.popup-link {
+  padding: 5px 10px;
+  border-right: 1px solid rgba(255,255,255,0.05);
+  cursor: pointer;
+  color: cornflowerblue;
+  font-weight: bold;
+  font-size: 14px;
+}
+.popup-link:last-child {
+  border: none;
+}
 .settings button, .settings .btn, .help main .header button, .favorites main .header button {
   border: none;
   background: black;
@@ -483,10 +494,11 @@ footer .tagger > ul {
 .tag-item {
   border: none;
   background: royalblue;
-  color: white;
+  color: white !important;
   padding: 2px 8px;
   border-radius: 4px;
   margin-right: 5px;
+  margin-bottom: 5px;
   cursor: pointer;
 }
 footer .tag-menu-items {

@@ -194,21 +194,28 @@ class Navbar {
     let existingAdvanced = JSON.stringify(existingAdvancedTokens)
 
 
-    if (key === "prompt") {
+    if (key === "prompt" || key === "-prompt") {
       // 2. if the 'key' filter is 'prompt'
         // find whether the 'val' is included in the existingPromptTokens array
         // if it is included, don't do anything
         // if it's not included, append it to existingPromptTokens array
       let exists
       // tag: doesn't need to be cleaned. only search keywords need to be cleaned
-      let cleaned = (val.startsWith("tag:") ? val : this.app.stripPunctuation(val))
+      let istag = /^-?tag:/.test(val)
+      let cleaned = (istag ? val : this.app.stripPunctuation(val))
       for(let i=0; i<existingPromptTokens.length; i++) {
         let token = existingPromptTokens[i]
         if (token === cleaned) {
           exists = true
         }
       }
-      if (!exists) {
+      if (key === "-prompt") {
+        if (istag) {
+          existingPromptTokens.push(cleaned)
+        } else {
+          existingPromptTokens.push("-:" + cleaned)
+        }
+      } else {
         existingPromptTokens.push(cleaned)
       }
     } else {
