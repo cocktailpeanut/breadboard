@@ -74,7 +74,7 @@ class App {
     let wordSet = {}
     if (o.prompt && typeof o.prompt === 'string' && o.prompt.length > 0) {
       let p = this.domparser.parseFromString(o.prompt, "text/html").documentElement.textContent;    // Escape XML-unsafe characters
-      wordSet = this.stripPunctuation(p).split(' ').reduce(function (prev, current) {
+      wordSet = this.stripPunctuation(p).split(/\s/).reduce(function (prev, current) {
         if (current.length > 0) prev[current] = true;
         return prev;
       }, {});
@@ -269,7 +269,7 @@ class App {
         await cb()
       }
     } else {
-      if (this.sync_mode === "reindex" || this.sync_mode === "default" || this.sync_mode === "false") {
+      if (this.sync_mode === "reindex" || this.sync_mode === "default") {
         let folderpaths = await this.db.folders.toArray()
         for(let folderpath of folderpaths) {
           let root_path = folderpath.name
@@ -384,7 +384,7 @@ class App {
   }
   stripPunctuation (str) {
 //    return str.replace(/(^[^\p{L}\s]|[^\p{L}\s]$)/gu,"")
-    return str.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()+]/g, "").replace(/\s{2,}/g, " ");
+    return str.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()+]/g, " ").replace(/\s{2,}/g, " ");
   }
 
 }
