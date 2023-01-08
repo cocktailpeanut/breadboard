@@ -33,7 +33,7 @@ class Standard {
         }
 
         let list = parser.convert(parsed)
-        await this.gm.set(filename, list, { overwrite: true } )
+        await this.gm.set(filename, list)
       }
 
       let serialized = await parser.serialize(this.folderpath, filename)

@@ -147,7 +147,7 @@ class Diffusionbee {
             key: 'xmp:height',
             val: m.img_h
           }]
-          await this.gm.set(filename, list, { overwrite: true })
+          await this.gm.set(filename, list)
         }
       }
       let serialized = await parser.serialize(this.folderpath, filename)
