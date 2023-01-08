@@ -301,7 +301,7 @@ nav select {
   border: none;
 }
 nav > * {
-  margin: 10px;
+  margin: 5px;
   display: block;
 }
 nav button, nav .btn {

@@ -100,6 +100,11 @@ class Selection {
       this.ds.setSelection(this.els)
       this.update(this.els)
     })
+    document.querySelector(".container").onmouseout = (event) => {
+      if (this.ds.stopped) {
+        this.ds.start()
+      }
+    }
     document.querySelector(".container").ondragstart = (event) => {
       event.preventDefault()
       event.stopPropagation()
@@ -108,6 +113,7 @@ class Selection {
       let dragging = this.ds.isDragging(event)
       if (this.els.length > 0) {
         if (this.els.includes(draggingTarget)) {
+          this.ds.stop()
           let filenames = this.els.map((el) => {
             return el.querySelector("img").getAttribute("data-src")
           })
