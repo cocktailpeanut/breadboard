@@ -18,7 +18,6 @@ class Standard {
       if (!info.parsed || force) {
         let buf = await fs.promises.readFile(filename)
         let parsed = await parser.parse(buf)
-
         if (!parsed.app) {
           // no app found => try parse from external txt file
           const parametersFilename = path.join(path.dirname(filename), path.basename(filename, path.extname(filename)) + '.txt');
@@ -34,7 +33,7 @@ class Standard {
         }
 
         let list = parser.convert(parsed)
-        await this.gm.set(filename, list)
+        await this.gm.set(filename, list, { overwrite: true } )
       }
 
       let serialized = await parser.serialize(this.folderpath, filename)

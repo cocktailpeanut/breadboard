@@ -1,6 +1,7 @@
 const exifr = require('exifr')
 const fs = require('fs')
 const escapeHtml = require('escape-html')
+const yaml = require('js-yaml');
 const GM = require('./gm')
 class Parser {
   constructor() {
@@ -39,7 +40,7 @@ class Parser {
       return parsed;
     }
 
-    return { ...metadata, app: "automatic1111" }
+    return { ...metadata, } // do not include "app" attribute because it's not possible to tell the app just from the parsed text file and there may be many other apps
   }
 
   convert(e, options) {
@@ -119,6 +120,8 @@ class Parser {
       x["xmp:width"] = parseInt(e.width)
     } else if (e.img_w) {
       x["xmp:width"] = parseInt(e.img_w)
+    } else if (e.Width) {
+      x["xmp:width"] = parseInt(e.Width)
     }
     if (options && options.height) {
       x["xmp:height"] = parseInt(options.height)
@@ -126,6 +129,8 @@ class Parser {
       x["xmp:height"] = parseInt(e.height)
     } else if (e.img_h) {
       x["xmp:height"] = parseInt(e.img_h)
+    } else if (e.Height) {
+      x["xmp:height"] = parseInt(e.Height)
     }
 
     if (options && options.cfg) {
@@ -134,6 +139,8 @@ class Parser {
       x["xmp:cfg_scale"] = parseFloat(e["CFG scale"])
     } else if (e.cfg_scale) {
       x["xmp:cfg_scale"] = parseFloat(e.cfg_scale)
+    } else if (e["Guidance Scale"]) {
+      x["xmp:cfg_scale"] = parseFloat(e["Guidance Scale"])
     }
 
     if (options && options.seed) {
@@ -318,25 +325,48 @@ class Parser {
       }
       return { ...image, ...p, }
     } else if (parsed.parameters) {
-      let re = /([^:]+):([^:]+)(,|$|\n)/g
-      let metaStr = parsed.parameters.split("\n").slice(1).join("\n")
-      let captured = [...metaStr.matchAll(re)].map((x) => {
-        return {
-          key: x[1].trim(),
-          val: x[2].trim(),
+      try {
+        /**********************************************
+        *
+        *   try the following format first:
+        *
+        *   prompt
+        *   key: val
+        *   key: val
+        *   key: val
+        **********************************************/
+        let lines = parsed.parameters.split(/\r?\n/)
+        const attrs = yaml.load(lines.slice(1).join("\n"))
+        return { prompt: lines[0], ...attrs }
+      } catch (e) {
+        /*******************************************************************
+        *
+        *   If the parse fails, try the following format (automatic1111):
+        *
+        *   prompt
+        *   key: val, key: val, key: val
+        *
+        *******************************************************************/
+        let re = /([^:]+):([^:]+)(,|$|\n)/g
+        let metaStr = parsed.parameters.split("\n").slice(1).join("\n")
+        let captured = [...metaStr.matchAll(re)].map((x) => {
+          return {
+            key: x[1].trim(),
+            val: x[2].trim(),
+          }
+        });
+        let metaChunks = metaStr.split(",").map(x => x.trim())
+        let attrs = {}
+        for(let kv of captured) {
+          attrs[kv.key] = kv.val
         }
-      });
-      let metaChunks = metaStr.split(",").map(x => x.trim())
-      let attrs = {}
-      for(let kv of captured) {
-        attrs[kv.key] = kv.val
+        attrs.prompt = this.getPrompt(parsed)
+        if (attr) {
+          if (attr.width) attrs.width = parseInt(attr.width)
+          if (attr.height) attrs.height = parseInt(attr.height)
+        }
+        return attrs
       }
-      attrs.prompt = this.getPrompt(parsed)
-      if (attr) {
-        if (attr.width) attrs.width = parseInt(attr.width)
-        if (attr.height) attrs.height = parseInt(attr.height)
-      }
-      return attrs
     }
   }
 }

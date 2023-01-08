@@ -19,23 +19,26 @@ class GM {
   *   - if the key doesn't already exist, set the value to the new value
   *
   ****************************************************************************/
-  async set (filepath, new_items) {
+  async set (filepath, new_items, options) {
     if (Array.isArray(filepath)) {
       let r = await Promise.allSettled(filepath.map((p) => {
-        return this.setOne(p, new_items)
+        return this.setOne(p, new_items, options)
       }))
       return r
     } else {
       let r = await Promise.allSettled([
-        this.setOne(filepath, new_items)
+        this.setOne(filepath, new_items, options)
       ])
       return r
     }
   }
-  async setOne(filepath, new_items) {
+  async setOne(filepath, new_items, options) {
     const buf = await fs.promises.readFile(filepath)
-    const info = await this._get(buf)
+    let info = await this._get(buf)
     if (info.list) {
+      if (options && options.overwrite) {
+        info.parsed = []
+      }
       const r = await this._set(filepath, info, new_items)
       return r
     } else {
@@ -136,10 +139,8 @@ class GM {
     // not exist? => insert into index 1 without replacing
     let modifyConfig = (info.chunk ? { index: info.chunk.index, count: 1 } : { index: 1, count: 0 });
 
-    //let rendered = items.map(item => this._xml(item)).join("\n")
     let normalized_old_items = this._normalize(info.parsed ? info.parsed : [])
     let normalized_new_items = this._normalize(new_items)
-
 
     let rendered = this._update(normalized_old_items, normalized_new_items)
     let m = this._wrapper(rendered)
