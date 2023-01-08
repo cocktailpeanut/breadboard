@@ -52,7 +52,6 @@ function createWindow (port) {
   mainWindow.maximize();
 
 
-
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('https:')) {
       shell.openExternal(url);

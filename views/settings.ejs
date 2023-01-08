@@ -180,6 +180,10 @@
         // 1. Delete the DB
         await db.delete()
 
+        // 2. Delete the checkpoint table
+        await user.checkpoints.clear()
+
+
         // 2. Send to reindex (the home page will read the localStorage to automatically fill the favorites and settings DB after reindexing)
         location.href = "/?synchronize=reindex"
       })

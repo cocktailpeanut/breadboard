@@ -328,7 +328,6 @@ addEventListener("message", async event => {
       query = appendStr
     }
   }
-  console.log("query = ", query)
 
   if (query) {
 
