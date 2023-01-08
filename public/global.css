@@ -375,9 +375,26 @@ nav button#favorite {
   display: none;
 }
 
-
-.favorites .row {
-  width: 100%;
+.favorites .global-filter.on {
+  background: none;
+  color: royalblue;
+}
+.favorites .global-filter {
+  cursor: pointer;
+  font-size: 1.2rem;
+  border: 2px solid royalblue;
+}
+.favorites .explain {
+  font-size: 1.2rem;
+  opacity: 0.8;
+}
+.favorites .explain a {
+  color: royalblue;
+  text-decoration: none;
+}
+.favorites main .header h2 {
+  border: none !important;
+  padding-left: 0 !important;
 }
 
 .settings input[type=range] {
@@ -395,7 +412,7 @@ nav button#favorite {
 }
 .settings main .row, .help main .row, .favorites main .row {
   padding: 10px 0;
-  font-size: 14px;
+  font-size: 1.2rem;
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -409,6 +426,9 @@ nav button#favorite {
   text-decoration: none;
   display: block;
   color: rgba(0,0,0,0.8);
+}
+.settings main .header, .help main .header, .favorites main .header {
+  margin-bottom: 10px;
 }
 .settings main .header h2, .help main .header h2, .favorites main .header h2 {
   text-transform: uppercase;
@@ -428,7 +448,7 @@ nav button#favorite {
 .popup-link:last-child {
   border: none;
 }
-.settings button, .settings .btn, .help main .header button, .favorites main .header button {
+.settings button, .settings .btn, .help main .header button, .favorites main button {
   border: none;
   background: black;
   border-radius: 2px;
@@ -436,9 +456,33 @@ nav button#favorite {
   cursor: pointer;
   padding: 5px 10px;
   font-weight: bold;
-  font-size: 12px;
+  font-size: 1rem;
   margin-right: 5px;
   text-decoration: none;
+}
+.favorites main .row {
+  padding: 10px;
+}
+body.default .favorites .row {
+  border-top: 1px solid rgba(0,0,0,0.1);
+}
+body.default .favorites .row:last-child {
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+body.dark .favorites .row {
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+body.dark .favorites .row:last-child {
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.favorites .global-filter {
+  padding: 5px 10px;
+  box-sizing: border-box;
+  font-size: 1rem;
+  background: royalblue;
+  color: white;
+  border-radius: 5px;
+  font-weight: bold;
 }
 /*
 .settings button {
@@ -631,10 +675,11 @@ body.default footer button {
 body.default nav button#favorite.selected {
   color: royalblue;
 }
-body.default .favorites .row {
+body.default .favorites .row a {
   color: rgba(0, 0, 0, 0.9);
+  text-decoration: none;
 }
-body.default .favorites .row:hover {
+body.default .favorites .row:hover a {
   color: royalblue;
 }
 body.default nav button:hover {
@@ -779,10 +824,11 @@ body.dark footer button {
   background: none;
   color: cornflowerblue;
 }
-body.dark .favorites .row {
+body.dark .favorites .row a {
   color: rgba(255,255,255,0.9);
+  text-decoration: none;
 }
-body.dark .favorites .row:hover {
+body.dark .favorites .row:hover a {
   color: cornflowerblue;
 }
 body.dark nav button:hover {

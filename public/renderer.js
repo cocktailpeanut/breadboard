@@ -19,6 +19,31 @@ class App {
     }
     this.domparser = new DOMParser()
   }
+  async init () {
+    console.log("INIT", VERSION)
+    this.selector = new TomSelect("nav select", {
+      onDropdownClose: () => {
+        this.selector.blur()
+      }
+    })
+    await this.init_db()
+    try {
+      let current_version = await this.user.settings.where({ key: "version" }).first()
+      if (current_version.val === VERSION) {
+        // Normal situation
+        await this.bootstrap()
+      } else {
+        // The current app version and the existing DB version doesn't match
+        // which means the app (with a new version) has been freshly installed 
+        // therefore re-index everything
+        await this.bootstrap({ fresh: true })
+      }
+    } catch (e) {
+      // VERSION does not exist => (only in the first version)
+      // Treat the same way as DB version not matching 
+      await this.bootstrap({ fresh: true })
+    }
+  }
   async clear_db() {
     // TODO => Must switch to only clearing files and checkpoints in the next release
     await this.db.delete()    // only for this version => from next version will be upgraded
@@ -42,31 +67,6 @@ class App {
       await this.synchronize()
     } else {
       await this.draw()
-    }
-  }
-  async init () {
-    console.log("INIT", VERSION)
-    this.selector = new TomSelect("nav select", {
-      onDropdownClose: () => {
-        this.selector.blur()
-      }
-    })
-    await this.init_db()
-    try {
-      let current_version = await this.db.settings.where({ key: "version" }).first()
-      if (current_version.val === VERSION) {
-        // Normal situation
-        await this.bootstrap()
-      } else {
-        // The current app version and the existing DB version doesn't match
-        // which means the app (with a new version) has been freshly installed 
-        // therefore re-index everything
-        await this.bootstrap({ fresh: true })
-      }
-    } catch (e) {
-      // VERSION does not exist => (only in the first version)
-      // Treat the same way as DB version not matching 
-      await this.bootstrap({ fresh: true })
     }
   }
   async insert (o) {
@@ -93,7 +93,7 @@ class App {
         await this.updateCheckpoint(o.root_path, o.btime)
       }
     } else {
-      let cp = await this.db.checkpoints.where({ root_path: o.root_path }).first()   
+      let cp = await this.user.checkpoints.where({ root_path: o.root_path }).first()   
       if (cp) {
         if (cp && cp.btime < o.btime) {
           await this.updateCheckpoint(o.root_path, o.btime)
@@ -104,12 +104,12 @@ class App {
     }
   }
   async checkpoint (root_path) {
-    let cp = await this.db.checkpoints.where({ root_path }).first()
+    let cp = await this.user.checkpoints.where({ root_path }).first()
     if (cp) return cp.btime
     else return null
   }
   async updateCheckpoint (root_path, btime) {
-    let cp = await this.db.checkpoints.put({ root_path, btime })
+    let cp = await this.user.checkpoints.put({ root_path, btime })
     this.checkpoints[root_path] = btime
   }
   init_rpc() {
@@ -130,61 +130,59 @@ class App {
       })
     })
   }
-  async init_db () {
-    this.db = new Dexie("breadboard")
+  // upgrade from legacy db schema (breadboard => data + user)
+  async upgrade() {
+
+    // 1. The "data" DB only contains attributes that can be crawled from the files
+    this.db = new Dexie("data")
     this.db.version(1).stores({
       files: "file_path, agent, model_name, root_path, prompt, btime, mtime, width, height, *tokens",
+    })
+
+    // 2. The "user" DB contains attributes that can NOT be crawled from the files
+    this.user = new Dexie("user")
+    this.user.version(1).stores({
       folders: "&name",
       checkpoints: "&root_path, btime",
       settings: "key, val",
-      favorites: "query"
+      favorites: "query, global"
     })
+
+    let legacy_exists = await Dexie.exists("breadboard")
+    if (legacy_exists) {
+      // if legacy db exists, delete it
+      let legacy_db = new Dexie("breadboard")
+      legacy_db.version(1).stores({
+        files: "file_path, agent, model_name, root_path, prompt, btime, mtime, width, height, *tokens",
+        folders: "&name",
+        checkpoints: "&root_path, btime",
+        settings: "key, val",
+        favorites: "query"
+      })
+      // 3. Migrate the "folders", "checkpoints", "settings", "favorites" table to the user table
+      let files = await legacy_db.files.toArray()
+      let folders = await legacy_db.folders.toArray()
+      let checkpoints = await legacy_db.checkpoints.toArray()
+      let settings = await legacy_db.settings.toArray()
+      let favorites = await legacy_db.favorites.toArray()
+      await this.db.files.bulkPut(files)
+      await this.user.folders.bulkPut(folders)
+      await this.user.checkpoints.bulkPut(checkpoints)
+      await this.user.settings.bulkPut(settings)
+
+      let fav = favorites.map((f) => {
+        return {
+          query: f.query,
+          global: 0
+        }
+      })
+      await this.user.favorites.bulkPut(fav)
+      await legacy_db.delete()
+    }
+  }
+  async init_db () {
+    await this.upgrade()
     await this.persist()
-
-    // try to recover from backup if backup exists, and then delete the backup
-
-    let backup = new Dexie("breadboard_backup")
-    backup.version(1).stores({
-      settings: "key, val",
-      folders: "&name",
-      favorites: "query"
-    })
-
-
-    let favorites = await backup.favorites.toArray()
-    console.log("favorites", favorites)
-    if (favorites && favorites.length > 0) {
-
-      // recover backup
-      await this.db.favorites.bulkPut(favorites)
-
-      // clear the DB if backup was fully recovered
-      await backup.favorites.clear()
-
-    }
-
-    let settings = await backup.settings.toArray()
-    console.log("settings", settings)
-    if (settings && settings.length > 0) {
-
-      // recover backup
-      await this.db.settings.bulkPut(settings)
-
-      // clear the DB if backup was fully recovered
-      await backup.settings.clear()
-
-    }
-
-    let folders = await backup.folders.toArray()
-    if (folders && folders.length > 0) {
-      // recover backup
-      await this.db.folders.bulkPut(folders)
-
-      // clear the DB if backup was fully recovered
-      await backup.folders.clear()
-    }
-
-    await backup.delete()
   }
   async persist() {
     if (!navigator.storage || !navigator.storage.persisted) {
@@ -214,7 +212,7 @@ class App {
     return "never";
   }
   async init_zoom () {
-    let zoom = await this.db.settings.where({ key: "zoom" }).first()
+    let zoom = await this.user.settings.where({ key: "zoom" }).first()
     if (zoom) {
       window.electronAPI.zoom(zoom.val)
     }
@@ -222,12 +220,12 @@ class App {
   async bootstrap_db () {
     let defaults = await window.electronAPI.defaults()
     for(let d of defaults) {
-      await this.db.folders.put({ name: d }).catch((e) => { })
+      await this.user.folders.put({ name: d }).catch((e) => { })
     }
-    await this.db.settings.put({ key: "version", val: VERSION })
+    await this.user.settings.put({ key: "version", val: VERSION })
   }
   async init_theme () {
-    this.theme = await this.db.settings.where({ key: "theme" }).first()
+    this.theme = await this.user.settings.where({ key: "theme" }).first()
     if (!this.theme) this.theme = { val: "default" }
     document.body.className = this.theme.val
     document.querySelector("html").className = this.theme.val
@@ -271,7 +269,7 @@ class App {
       }
     } else {
       if (this.sync_mode === "reindex" || this.sync_mode === "default" || this.sync_mode === "false") {
-        let folderpaths = await this.db.folders.toArray()
+        let folderpaths = await this.user.folders.toArray()
         for(let folderpath of folderpaths) {
           let root_path = folderpath.name
           let c = await this.checkpoint(root_path)
@@ -362,7 +360,7 @@ class App {
     document.querySelector("footer").classList.add("hidden")
     document.querySelector(".container").classList.add("hidden")
     if (this.query) {
-      let favorited = await this.db.favorites.get(this.query)
+      let favorited = await this.user.favorites.get(this.query)
       if (favorited) {
         document.querySelector("nav #favorite").classList.add("selected") 
         document.querySelector("nav #favorite i").className = "fa-solid fa-star"

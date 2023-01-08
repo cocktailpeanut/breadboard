@@ -10,7 +10,7 @@
     <link href="./global.css" rel="stylesheet" />
     </style>
   </head>
-  <body>
+  <body class="<%=theme%>">
     <div id='bar'></div>
     <nav class="<%=platform%>">
       <a class='btn' href="/" class='btn'><i class="fa-solid fa-house"></i></a>
@@ -47,28 +47,5 @@
         </div>
       </main>
     </div>
-    <script src="./dexie.js"></script>
-    <script>
-    let db;
-    const init_db = async () => {
-      db = new Dexie("breadboard")
-      db.version(1).stores({
-        files: "file_path, agent, model_name, root_path, prompt, btime, mtime, width, height, *tokens",
-        folders: "&name",
-        checkpoints: "&root_path, btime",
-        settings: "key, val",
-        favorites: "query"
-      })
-    }
-    const init_theme = async () => {
-      let theme = await db.settings.where({ key: "theme" }).first()
-      if (!theme) theme = { val: "default" }
-      document.body.className = theme.val
-    }
-    (async () => {
-      await init_db()
-      await init_theme()
-    })();
-    </script>
   </body>
 </html>

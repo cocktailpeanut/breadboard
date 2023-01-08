@@ -19,7 +19,7 @@
     }
     </style>
   </head>
-  <body>
+  <body class="<%=theme%>">
     <div id='bar'></div>
     <nav class="<%=platform%>">
       <a class='btn' href="/" class='btn'><i class="fa-solid fa-house"></i></a>
@@ -38,40 +38,26 @@
     <script src="./dexie.js"></script>
     <script>
     let db;
+    let user;
     let backup;
     const VERSION = "<%=version%>"
     const init_db = async () => {
-      db = new Dexie("breadboard")
+      // init data db
+      db = new Dexie("data")
       db.version(1).stores({
         files: "file_path, agent, model_name, root_path, prompt, btime, mtime, width, height, *tokens",
+      })
+      // init user db
+      user = new Dexie("user")
+      user.version(1).stores({
         folders: "&name",
         checkpoints: "&root_path, btime",
         settings: "key, val",
-        favorites: "query"
+        favorites: "query, global"
       })
-    }
-    const run_backup = async () => {
-      backup = new Dexie("breadboard_backup")
-      backup.version(1).stores({
-        settings: "key, val",
-        folders: "&name",
-        favorites: "query"
-      })
-
-      // backup favorites
-      let favorited = await db.favorites.toArray()
-      await backup.favorites.bulkPut(favorited)
-
-      // backup settings
-      let settings = await db.settings.toArray()
-      await backup.settings.bulkPut(settings)
-
-      // backup folders
-      let folders = await db.folders.toArray()
-      await backup.folders.bulkPut(folders)
     }
     const init_theme = async () => {
-      let theme = await db.settings.where({ key: "theme" }).first()
+      let theme = await user.settings.where({ key: "theme" }).first()
       if (!theme) theme = { val: "default" }
       document.body.className = theme.val
       document.querySelector("html").className = theme.val
@@ -85,7 +71,7 @@
       }
     }
     const renderSettings = async (sync_needed) => {
-      let res = await db.folders.toArray()
+      let res = await user.folders.toArray()
       let rows = res.map((r) => {
         return `<div class='row'>
         <div>${r.name}</div>
@@ -95,7 +81,7 @@
     </div>`
       }).join("")
 
-      let currentZoom = await db.settings.where({ key: "zoom" }).first()
+      let currentZoom = await user.settings.where({ key: "zoom" }).first()
       let zoom;
       if (currentZoom) {
         zoom = currentZoom.val
@@ -170,7 +156,7 @@
         e.preventDefault()
         e.stopPropagation()
         window.electronAPI.zoom(e.target.value)
-        await db.settings.put({ key: "zoom", val: e.target.value })
+        await user.settings.put({ key: "zoom", val: e.target.value })
         e.target.closest(".rows").querySelector(".currentZoom").innerHTML = "" + e.target.value + "%"
       })
       /*
@@ -191,13 +177,10 @@
         e.preventDefault()
         e.stopPropagation()
 
-        // 1. back up favorites and settings to backup storage
-        await run_backup()
-
-        // 2. Delete the DB
+        // 1. Delete the DB
         await db.delete()
 
-        // 3. Send to reindex (the home page will read the localStorage to automatically fill the favorites and settings DB after reindexing)
+        // 2. Send to reindex (the home page will read the localStorage to automatically fill the favorites and settings DB after reindexing)
         location.href = "/?synchronize=reindex"
       })
       document.querySelector("#debug").addEventListener('click', async (e) => {
@@ -209,7 +192,7 @@
         let paths = await window.electronAPI.select()
         if (paths && paths.length > 0) {
           for(let name of paths) {
-            await db.folders.put({ name: name })
+            await user.folders.put({ name: name })
           }
           await renderSettings(true)
         }
@@ -224,11 +207,11 @@
           if (confirmed) {
             let name = delTarget.getAttribute("data-name")
             // Delete the folder
-            await db.folders.where({ name }).delete()
+            await user.folders.where({ name }).delete()
             // Delete all the files in the folder
             await db.files.where({ root_path: name }).delete()
             // Delete the checkpoint
-            await db.checkpoints.where({ root_path: name }).delete()
+            await user.checkpoints.where({ root_path: name }).delete()
             await renderSettings()
           }
         } else if (reindexTarget) {
@@ -236,20 +219,20 @@
           // Delete all the files in the folder
           await db.files.where({ root_path: name }).delete()
           // Delete the checkpoint
-          await db.checkpoints.where({ root_path: name }).delete()
+          await user.checkpoints.where({ root_path: name }).delete()
           location.href = "/?synchronize=reindex_folder&sync_folder="+encodeURIComponent(name)
         }
       })
       document.querySelector("#dark-theme").addEventListener('click', async (e) => {
         e.preventDefault()
         e.stopPropagation()
-        await db.settings.put({ key: "theme", val: "dark" })
+        await user.settings.put({ key: "theme", val: "dark" })
         await init_theme()
       })
       document.querySelector("#default-theme").addEventListener('click', async (e) => {
         e.preventDefault()
         e.stopPropagation()
-        await db.settings.put({ key: "theme", val: "default" })
+        await user.settings.put({ key: "theme", val: "default" })
         await init_theme()
       })
       document.querySelector(".search").addEventListener("keyup", (e) => {

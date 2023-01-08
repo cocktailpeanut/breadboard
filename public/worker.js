@@ -1,11 +1,22 @@
 importScripts("./dexie.js")
-var db = new Dexie("breadboard")
+//var db = new Dexie("breadboard")
+//db.version(1).stores({
+//  files: "file_path, agent, model_name, root_path, prompt, btime, mtime, width, height, *tokens",
+//  folders: "&name",
+//  checkpoints: "&root_path, btime",
+//  settings: "key, val",
+//  favorites: "query"
+//})
+var db = new Dexie("data")
+var user = new Dexie("user")
 db.version(1).stores({
   files: "file_path, agent, model_name, root_path, prompt, btime, mtime, width, height, *tokens",
+})
+user.version(1).stores({
   folders: "&name",
   checkpoints: "&root_path, btime",
   settings: "key, val",
-  favorites: "query"
+  favorites: "query, global"
 })
 const esc = (str) => {
   return str
@@ -304,9 +315,23 @@ function find (phrase) {
   });
 }
 addEventListener("message", async event => {
-  const { query, sorter } = event.data;
+  let { query, sorter } = event.data;
   let res = []
+
+  // Global filter application
+  let globalQueries = await user.favorites.where({ global: 1 }).toArray()
+  if (globalQueries.length > 0) {
+    let appendStr = globalQueries.map((item) => { return item.query }).join(" ")
+    if (query) {
+      query = query + " " + appendStr
+    } else {
+      query = appendStr
+    }
+  }
+  console.log("query = ", query)
+
   if (query) {
+
     res = await find(query, sorter)
     if (sorter.direction > 0) {
       if (sorter.compare === 0) {

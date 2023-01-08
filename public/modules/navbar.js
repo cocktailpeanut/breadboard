@@ -61,13 +61,13 @@ class Navbar {
     document.querySelector("#favorite").addEventListener("click", async (e) => {
       let query = document.querySelector(".search").value
       if (query && query.length > 0) {
-        let exists = await this.app.db.favorites.get({ query })
+        let exists = await this.app.user.favorites.get({ query })
         let favorited;
         if (exists) {
-          await this.app.db.favorites.where({ query }).delete()
+          await this.app.user.favorites.where({ query }).delete()
           favorited = false
         } else {
-          await this.app.db.favorites.put({ query })
+          await this.app.user.favorites.put({ query, global: 0 })
           favorited = true
         }
         if (favorited) {

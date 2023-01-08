@@ -41,10 +41,7 @@ const titleBarOverlay = (theme) => {
 }
 function createWindow (port) {
   mainWindow = new BrowserWindow({
-		//titleBarStyle : (is_mac ? "hidden" : "default"),
 		titleBarStyle : "hidden",
-		//titleBarOverlay : !is_mac,
-//    titleBarOverlay: false,
 		titleBarOverlay : titleBarOverlay(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
