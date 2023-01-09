@@ -101,7 +101,7 @@ class Selection {
       this.update(this.els)
     })
     document.querySelector(".container").onmouseout = (event) => {
-      if (this.ds.stopped) {
+      if (this.ds && this.ds.stopped) {
         this.ds.start()
       }
     }
