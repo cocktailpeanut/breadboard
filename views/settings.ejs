@@ -71,7 +71,7 @@
         location.href = "/"
       }
     }
-    const renderSettings = async (sync_needed) => {
+    const renderSettings = async () => {
       let res = await user.folders.toArray()
       let rows = res.map((r) => {
         return `<div class='row'>
@@ -150,9 +150,9 @@
         </div>
       </div>
     </main>`
-      if (sync_needed) {
+      <% if (query.sync_needed) { %>
         document.querySelector(".settings #reindex2").classList.remove("hidden")
-      }
+      <% } %>
       document.querySelector("input[type=range]").addEventListener("change", async (e) => {
         e.preventDefault()
         e.stopPropagation()
@@ -189,6 +189,8 @@
         location.href = "/?synchronize=reindex"
       })
       document.querySelector("#debug").addEventListener('click', async (e) => {
+        e.preventDefault()
+        e.stopPropagation()
         window.electronAPI.debug()
       })
       document.querySelector("#select").addEventListener('click', async (e) => {
@@ -199,7 +201,7 @@
           for(let name of paths) {
             await user.folders.put({ name: name })
           }
-          await renderSettings(true)
+          location.href = location.href + "?sync_needed=true"
         }
       })
       document.querySelector(".settings").addEventListener("click", async (e) => {
@@ -217,7 +219,7 @@
             await db.files.where({ root_path: name }).delete()
             // Delete the checkpoint
             await user.checkpoints.where({ root_path: name }).delete()
-            await renderSettings()
+            location.href = location.href
           }
         } else if (reindexTarget) {
           let name = reindexTarget.getAttribute("data-name")

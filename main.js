@@ -124,6 +124,7 @@ app.whenReady().then(async () => {
     res.render("settings", {
       platform: process.platform,
       version: VERSION,
+      query: req.query,
       theme
     })
   })
