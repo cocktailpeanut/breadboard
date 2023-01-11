@@ -210,6 +210,18 @@ class Parser {
       x["xmp:model_name"] = e.Model
     }
 
+    if (options && options.model_hash) {
+      x["xmp:model_hash"] = options.model_hash
+    } else if (e.Model_hash) {
+      x["xmp:model_hash"] = e.Model_hash
+    } else if (e["Model hash"]) {
+      x["xmp:model_hash"] = e["Model hash"]
+    } else if (e["model hash"]) {
+      x["xmp:model_hash"] = e["model hash"]
+    } else if (e.model_hash) {
+      x["xmp:model_hash"] = e.model_hash
+    }
+
     if (options && options.model_url) {
       x["xmp:model_url"] = options.model_url
     } else if (e.Model_url) {
@@ -234,6 +246,7 @@ class Parser {
       "xmp:seed",
       "xmp:negative_prompt",
       "xmp:model_name",
+      "xmp:model_hash",
       "xmp:model_url",
       "xmp:agent",
       "xmp:width",

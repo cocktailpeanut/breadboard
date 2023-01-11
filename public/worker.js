@@ -10,7 +10,7 @@ importScripts("./dexie.js")
 var db = new Dexie("data")
 var user = new Dexie("user")
 db.version(1).stores({
-  files: "file_path, agent, model_name, root_path, prompt, btime, mtime, width, height, *tokens",
+  files: "file_path, agent, model_name, model_hash, root_path, prompt, btime, mtime, width, height, *tokens",
 })
 user.version(1).stores({
   folders: "&name",
@@ -83,6 +83,10 @@ function applyFilter(q, filters) {
       } else if (filter.model_name) {
         q = q.and((item) => {
           return new RegExp(esc(filter.model_name), "i").test(item.model_name)
+        })
+      } else if (filter.model_hash) {
+        q = q.and((item) => {
+          return filter.model_hash && item.model_hash && filter.model_hash.toLowerCase() === item.model_hash.toLowerCase()
         })
       } else if (filter.agent) {
         //q = q.and("agent").startsWithIgnoreCase(filter.agent)
@@ -225,6 +229,10 @@ function find (phrase) {
     } else if (prefix.startsWith("model_name:")) {
       filters.push({
         model_name: prefix.replace("model_name:", "").trim()
+      })
+    } else if (prefix.startsWith("model_hash:")) {
+      filters.push({
+        model_hash: prefix.replace("model_hash:", "").trim()
       })
     } else if (prefix.startsWith("agent:")) {
       filters.push({

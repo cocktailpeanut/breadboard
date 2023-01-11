@@ -23,7 +23,9 @@ const card = (meta, stripPunctuation) => {
     return attr.key !== "root_path"
   }).map((attr) => {
     let el
-    if (attr.key === "model_name" && attr.val) {
+    if (attr.key === "model_name") {
+      el = `<span class='token' data-value="${attr.val}">${attr.val}</span>`
+    } else if (attr.key === "model_hash") {
       el = `<span class='token' data-value="${attr.val}">${attr.val}</span>`
     } else if (attr.key === "agent" && attr.val) {
       el = `<span class='token' data-value="${attr.val}">${attr.val}</span>`
