@@ -76,9 +76,29 @@ function applyFilter(q, filters) {
           return !item.tokens.map(x => x.toLowerCase()).includes(tag)
         })
       } else if (filter["-"]) {
-        let token = filter["-"].slice(2).toLowerCase()   // gotta strip off the -: to get only the keyword
+        let keyword = filter["-"].slice(2).toLowerCase()   // gotta strip off the -: to get only the keyword
+        let prefixes = keyword.split(" ").filter(x => x && x.length > 0)
+        // PREFIXES: ~ "rainy day" => ~ (rainy AND day) => ~rainy OR ~day
+        // filter if at least one of the prefixes DO NOT appear in the tokens
         q = q.and((item) => {
-          return !item.tokens.map(x => x.toLowerCase()).includes(token)
+          let tokens = item.tokens.map(x => x.toLowerCase())
+          let test = false
+          for(let prefix of prefixes) {
+            // For each prefix, the test is to check that the tokens do NOT include the prefix
+            // If at the end, if the prefix is proven to not exist, immediately return true
+            // otherwise try with the next prefix until you find a prefix that does not exist in the tokens
+            let included = false
+            for(let token of tokens) {
+              if (token.startsWith(prefix)) {
+                included = true
+              }
+            }
+            if (!included) {
+              test = true
+              break;
+            }
+          }
+          return test
         })
       } else if (filter.model_name) {
         q = q.and((item) => {
