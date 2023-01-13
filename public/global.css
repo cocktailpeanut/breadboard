@@ -44,13 +44,6 @@ body {
 .end-marker i {
   font-size: 40px;
 }
-.end-marker .virtual {
-  position: absolute;
-  height: 300px;
-  top: -300px;
-  width: 100%;
-  pointer-event:none;
-}
 .content {
   display: flex;
   flex-wrap: wrap;

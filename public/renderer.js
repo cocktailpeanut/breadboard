@@ -248,7 +248,7 @@ class App {
             this.selection.init()
           }, 0)
         } else {
-          document.querySelector(".end-marker .caption").classList.remove("hidden")
+          document.querySelector(".end-marker .caption i").classList.remove("fa-spin")
         }
       }
     }
@@ -342,7 +342,6 @@ class App {
   async fill ({ count, res }) {
     let items = res
     document.querySelector(".content-info").innerHTML = `<i class="fa-solid fa-check"></i> ${count}`
-//    document.querySelector(".container").classList.remove("hidden")
     document.querySelector(".status").innerHTML = "Loading..."
     let data = items.map((item) => {
       return `<div class='card' data-root="${item.root_path}" data-src="${item.file_path}">${card(item, this.stripPunctuation)}</div>`
@@ -358,16 +357,13 @@ class App {
     }
     this.clusterize.append(data)
     document.querySelector(".status").innerHTML = ""
-//    document.querySelector(".loading").classList.add("hidden")
     // start observing
     this.observer.unobserve(document.querySelector(".end-marker"));
     this.observer.observe(document.querySelector(".end-marker"));
   }
   async draw () {
-//    document.querySelector(".loading").classList.remove("hidden")
     document.querySelector(".search").value = (this.query && this.query.length ? this.query : "")
     document.querySelector("footer").classList.add("hidden")
-//    document.querySelector(".container").classList.add("hidden")
     if (this.query) {
       let favorited = await this.user.favorites.get(this.query)
       if (favorited) {
