@@ -346,7 +346,7 @@ addEventListener("message", async event => {
   let { query, sorter, offset } = event.data;
   let res = []
 
-  let LIMIT = 100
+  let LIMIT = 500
 
   // Global filter application
   let globalQueries = await user.favorites.where({ global: 1 }).toArray()
