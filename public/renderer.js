@@ -158,8 +158,8 @@ class App {
           await this.draw()
         }
       });
-      this.offset = -1;
-      this.observer.observe(document.querySelector(".end-marker"));
+      this.offset = 0
+      await this.draw()
     }
   }
   async insert (o) {
