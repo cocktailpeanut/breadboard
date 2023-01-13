@@ -157,7 +157,7 @@ class Parser {
       x["xmp:negative_prompt"] = e["Negative prompt"]
     } else {
       // invokeai does negative prompts differently (included in the prompt), so need to parse the prompt to extract negative prompts
-      if (/invoke/gi.test(x["xmp:agent"])) {
+      if (e.prompt && Array.isArray(e.prompt) && e.prompt[0].prompt) {
         // test for invokeAI negative prompt syntax
         let negative_chunks = []
         let positive_chunks = []
