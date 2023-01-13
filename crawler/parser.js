@@ -320,13 +320,6 @@ class Parser {
     let mtime = new Date(stat.mtime).getTime()
     return { ...o, root_path, file_path, mtime, btime }
   }
-  getPrompt(parsed) {
-    if (parsed.Dream) {
-      return parsed.Dream.match(/^".*"/g)[0]
-    } else if (parsed.parameters) {
-      return parsed.parameters.split("\n").slice(0, -1).join(" ")
-    }
-  }
   getMeta(parsed, attr) {
     if (parsed["sd-metadata"]) {
       let p = JSON.parse(parsed["sd-metadata"])
@@ -361,7 +354,8 @@ class Parser {
         *
         *******************************************************************/
         let re = /([^:]+):([^:]+)(,|$|\n)/g
-        let metaStr = parsed.parameters.split("\n").slice(1).join("\n")
+        let items = parsed.parameters.split(/,|$|\n/)
+        let metaStr = items.slice(1).join("\n")
         let captured = [...metaStr.matchAll(re)].map((x) => {
           return {
             key: x[1].trim(),
@@ -373,7 +367,17 @@ class Parser {
         for(let kv of captured) {
           attrs[kv.key] = kv.val
         }
-        attrs.prompt = this.getPrompt(parsed)
+
+        let promptChunks = []
+        for(let item of items) {
+          if (!re.test(item)) {
+            promptChunks.push(item)
+          } else {
+            break;
+          }
+        }
+        attrs.prompt = promptChunks.join(" ")
+
         if (attr) {
           if (attr.width) attrs.width = parseInt(attr.width)
           if (attr.height) attrs.height = parseInt(attr.height)
