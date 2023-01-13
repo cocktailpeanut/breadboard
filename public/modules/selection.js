@@ -226,7 +226,8 @@ class Selection {
     })
   }
   init () {
-    if (!this.ds) {
+    if (this.ds) this.ds.stop()
+//    if (!this.ds) {
       this.ds = new DragSelect({
         selectables: document.querySelectorAll('.card'),
         area: document.querySelector(".content"),
@@ -245,7 +246,7 @@ class Selection {
       this.ds.subscribe("dragstart", (e) => {
         console.log("#dragselect dragstart", e)
       })
-    }
+//    }
   }
   async del() {
     let selected = this.els.map((el) => {

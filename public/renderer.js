@@ -151,7 +151,15 @@ class App {
     if (this.sync_mode === "default" || this.sync_mode === "reindex" || this.sync_mode === "reindex_folder") {
       await this.synchronize()
     } else {
-      await this.draw()
+      this.observer = new IntersectionObserver(async entries => {
+        let entry = entries[0]
+        if (entry.intersectionRatio > 0) {
+          this.offset = this.offset + 1
+          await this.draw()
+        }
+      });
+      this.offset = -1;
+      this.observer.observe(document.querySelector(".end-marker"));
     }
   }
   async insert (o) {
@@ -231,13 +239,17 @@ class App {
     if (!this.worker) {
       this.worker = new Worker("./worker.js")
       this.worker.onmessage = async (e) => {
-        await this.fill(e.data)
-        setTimeout(() => {
-          document.querySelector("#sync").classList.remove("disabled")
-          document.querySelector("#sync").disabled = false
-          document.querySelector("#sync i").classList.remove("fa-spin")
-          this.selection.init()
-        }, 0)
+        if (e.data.res.length > 0) {
+          await this.fill(e.data)
+          setTimeout(() => {
+            document.querySelector("#sync").classList.remove("disabled")
+            document.querySelector("#sync").disabled = false
+            document.querySelector("#sync i").classList.remove("fa-spin")
+            this.selection.init()
+          }, 0)
+        } else {
+          document.querySelector(".end-marker .caption").classList.remove("hidden")
+        }
       }
     }
   }
@@ -327,29 +339,35 @@ class App {
       }
     }
   }
-  async fill (items) {
-    const chunkSize = 800;
-    document.querySelector(".content-info").innerHTML = `<i class="fa-solid fa-check"></i> ${items.length}`
-    document.querySelector(".container").classList.remove("hidden")
+  async fill ({ count, res }) {
+    let items = res
+    document.querySelector(".content-info").innerHTML = `<i class="fa-solid fa-check"></i> ${count}`
+//    document.querySelector(".container").classList.remove("hidden")
     document.querySelector(".status").innerHTML = "Loading..."
     let data = items.map((item) => {
       return `<div class='card' data-root="${item.root_path}" data-src="${item.file_path}">${card(item, this.stripPunctuation)}</div>`
     })
-    this.clusterize = new Clusterize({
-      rows: data,
-      scrollElem: document.querySelector(".container"),
-      contentElem: document.querySelector(".content"),
-      rows_in_block: 500,
-      blocks_in_cluster: 10
-    });
+    if (!this.clusterize) {
+      this.clusterize = new Clusterize({
+  //      rows: data,
+        scrollElem: document.querySelector(".container"),
+        contentElem: document.querySelector(".content"),
+        rows_in_block: 500,
+        blocks_in_cluster: 10
+      });
+    }
+    this.clusterize.append(data)
     document.querySelector(".status").innerHTML = ""
-    document.querySelector(".loading").classList.add("hidden")
+//    document.querySelector(".loading").classList.add("hidden")
+    // start observing
+    this.observer.unobserve(document.querySelector(".end-marker"));
+    this.observer.observe(document.querySelector(".end-marker"));
   }
   async draw () {
-    document.querySelector(".loading").classList.remove("hidden")
+//    document.querySelector(".loading").classList.remove("hidden")
     document.querySelector(".search").value = (this.query && this.query.length ? this.query : "")
     document.querySelector("footer").classList.add("hidden")
-    document.querySelector(".container").classList.add("hidden")
+//    document.querySelector(".container").classList.add("hidden")
     if (this.query) {
       let favorited = await this.user.favorites.get(this.query)
       if (favorited) {
@@ -363,7 +381,8 @@ class App {
       document.querySelector("nav #favorite").classList.remove("selected") 
       document.querySelector("nav #favorite i").className = "fa-regular fa-star"
     }
-    this.worker.postMessage({ query: this.query, sorter: this.navbar.sorter })
+    this.worker.postMessage({ query: this.query, sorter: this.navbar.sorter, offset: this.offset })
+
   }
   async search (query, silent) {
     let params = new URLSearchParams({ sorter_code: this.sorter_code })

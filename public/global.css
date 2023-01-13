@@ -21,7 +21,9 @@ body {
 .container {
   flex-grow: 1;
   outline: none;
+  /*
   padding-bottom: 300px;
+  */
 }
 .content-info {
   box-sizing: border-box;
@@ -31,6 +33,23 @@ body {
 .loading {
   padding: 50px;
   text-align: center;
+}
+.end-marker {
+  color: silver;
+  text-align: center;
+  padding: 80px;
+  box-sizing: border-box;
+  font-size: 20px;
+}
+.end-marker i {
+  font-size: 40px;
+}
+.end-marker .virtual {
+  position: absolute;
+  height: 300px;
+  top: -300px;
+  width: 100%;
+  pointer-event:none;
 }
 .content {
   display: flex;

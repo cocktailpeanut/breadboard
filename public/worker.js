@@ -343,8 +343,10 @@ function find (phrase) {
   });
 }
 addEventListener("message", async event => {
-  let { query, sorter } = event.data;
+  let { query, sorter, offset } = event.data;
   let res = []
+
+  let LIMIT = 100
 
   // Global filter application
   let globalQueries = await user.favorites.where({ global: 1 }).toArray()
@@ -357,9 +359,11 @@ addEventListener("message", async event => {
     }
   }
 
+
+  let count
   if (query) {
 
-    res = await find(query, sorter)
+    res = await find(query)
     if (sorter.direction > 0) {
       if (sorter.compare === 0) {
         res.sort((x, y) => {
@@ -385,12 +389,19 @@ addEventListener("message", async event => {
         })
       }
     }
+    count = res.length
+    if (count > offset * LIMIT) {
+      res = res.slice(offset * LIMIT, (offset+1) * LIMIT)
+    } else {
+      res = []
+    }
   } else {
     if (sorter.direction > 0) {
-      res = await db.files.orderBy(sorter.column).toArray()
+      res = await db.files.orderBy(sorter.column).offset(offset).limit(LIMIT).toArray()
     } else if (sorter.direction < 0) {
-      res = await db.files.orderBy(sorter.column).reverse().toArray()
+      res = await db.files.orderBy(sorter.column).reverse().offset(offset).limit(LIMIT).toArray()
     }
+    count = await db.files.count()
   }
-  postMessage(res)
+  postMessage({ res, count })
 });
