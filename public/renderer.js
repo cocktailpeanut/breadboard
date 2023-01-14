@@ -363,7 +363,6 @@ class App {
   }
   async draw () {
     document.querySelector(".search").value = (this.query && this.query.length ? this.query : "")
-    document.querySelector("footer").classList.add("hidden")
     if (this.query) {
       let favorited = await this.user.favorites.get(this.query)
       if (favorited) {
