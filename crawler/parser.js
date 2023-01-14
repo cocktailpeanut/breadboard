@@ -354,8 +354,22 @@ class Parser {
         *
         *******************************************************************/
         let re = /([^:]+):([^:]+)(,|$|\n)/g
-        let items = parsed.parameters.split(/,|$|\n/)
-        let metaStr = items.slice(1).join("\n")
+
+        // split based on:
+        // ,
+        // \n
+        // $ (end of line)
+        //
+        // each item is made up of:
+        // - line
+        // - delimiter
+        let items = [...parsed.parameters.matchAll(/([^,\n]+)(,|$|\n)/g)].map((item) => {
+          return {
+            line: item[1],
+            delimiter: item[2]
+          }
+        })
+        let metaStr = items.slice(1).map(x => x.line).join("\n")
         let captured = [...metaStr.matchAll(re)].map((x) => {
           return {
             key: x[1].trim(),
@@ -367,17 +381,16 @@ class Parser {
         for(let kv of captured) {
           attrs[kv.key] = kv.val
         }
-
-        let promptChunks = []
+        let promptStr = ""
         for(let item of items) {
-          if (!re.test(item)) {
-            promptChunks.push(item)
+          if (!re.test(item.line)) {
+            // reconstruct the line by appending each line followed by the delimiter
+            promptStr = promptStr + item.line + item.delimiter
           } else {
             break;
           }
         }
-        attrs.prompt = promptChunks.join(" ")
-
+        attrs.prompt = promptStr
         if (attr) {
           if (attr.width) attrs.width = parseInt(attr.width)
           if (attr.height) attrs.height = parseInt(attr.height)
