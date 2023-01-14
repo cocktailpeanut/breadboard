@@ -153,22 +153,13 @@
       <% if (query.sync_needed) { %>
         document.querySelector(".settings #reindex2").classList.remove("hidden")
       <% } %>
-      document.querySelector("input[type=range]").addEventListener("change", async (e) => {
+      document.querySelector("input[type=range]").addEventListener("input", async (e) => {
         e.preventDefault()
         e.stopPropagation()
         window.electronAPI.zoom(e.target.value)
         await user.settings.put({ key: "zoom", val: e.target.value })
         e.target.closest(".rows").querySelector(".currentZoom").innerHTML = "" + e.target.value + "%"
       })
-      /*
-      document.querySelector("#reindex").addEventListener("click", async (e) => {
-        e.preventDefault()
-        e.stopPropagation()
-        await db.files.clear()
-        await db.checkpoints.clear()
-        location.href = "/?synchronize=reindex"
-      })
-      */
       document.querySelector("#reindex2").addEventListener("click", async (e) => {
         e.preventDefault()
         e.stopPropagation()
