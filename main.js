@@ -87,7 +87,9 @@ const updateCheck = async () => {
   }
 }
 app.whenReady().then(async () => {
-  await updateCheck()
+  await updateCheck().catch((e) => {
+    console.log("update check error", e)
+  })
 
 //  session.defaultSession.clearStorageData()   // for testing freshly every time
   const port = await new Promise((resolve, reject) => {
