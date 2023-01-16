@@ -96,6 +96,12 @@
       </div>
     </main>`
     }
+      document.querySelector("#prev").addEventListener("click", (e) => {
+        history.back()
+      })
+      document.querySelector("#next").addEventListener("click", (e) => {
+        history.forward()
+      })
     document.querySelector(".search").addEventListener("keyup", (e) => {
       if (e.key === "Enter") {
         location.href = "/?query=" + e.target.value

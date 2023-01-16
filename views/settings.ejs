@@ -153,6 +153,12 @@
       <% if (query.sync_needed) { %>
         document.querySelector(".settings #reindex2").classList.remove("hidden")
       <% } %>
+      document.querySelector("#prev").addEventListener("click", (e) => {
+        history.back()
+      })
+      document.querySelector("#next").addEventListener("click", (e) => {
+        history.forward()
+      })
       document.querySelector("input[type=range]").addEventListener("input", async (e) => {
         e.preventDefault()
         e.stopPropagation()
