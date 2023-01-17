@@ -397,9 +397,9 @@ addEventListener("message", async event => {
     }
   } else {
     if (sorter.direction > 0) {
-      res = await db.files.orderBy(sorter.column).offset(offset).limit(LIMIT).toArray()
+      res = await db.files.orderBy(sorter.column).offset(offset * LIMIT).limit(LIMIT).toArray()
     } else if (sorter.direction < 0) {
-      res = await db.files.orderBy(sorter.column).reverse().offset(offset).limit(LIMIT).toArray()
+      res = await db.files.orderBy(sorter.column).reverse().offset(offset * LIMIT).limit(LIMIT).toArray()
     }
     count = await db.files.count()
   }
