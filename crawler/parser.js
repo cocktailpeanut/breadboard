@@ -350,46 +350,50 @@ class Parser {
         *   If the parse fails, try the following format (automatic1111):
         *
         *   prompt
+        *   Negative prompt: .... (optional)
         *   key: val, key: val, key: val
         *
         *******************************************************************/
-        let re = /([^:]+):([^:]+)(,|$|\n)/g
+        let lines = parsed.parameters.split(/\r?\n/).filter((x) => {
+          return x && x.length > 0
+        })
 
-        // split based on:
-        // ,
-        // \n
-        // $ (end of line)
-        //
-        // each item is made up of:
-        // - line
-        // - delimiter
-        let items = [...parsed.parameters.matchAll(/([^,\n]+)(,|$|\n)/g)].map((item) => {
+        // last line is the attributes
+        // last - 1 line
+        //    if it starts with "Negative prompt:", is the negative prompt
+        //    otherwise, there is no negative prompt
+        // The rest lines are treated as the prompt
+
+        let re = /([^:]+):([^:]+)(,|$|\n)/g
+        let kvs = lines[lines.length-1]
+        let items = [...kvs.matchAll(re)].map((item) => {
           return {
-            line: item[1],
-            delimiter: item[2]
+            key: item[1].trim(),
+            val: item[2].trim()
           }
         })
-        let metaStr = items.slice(1).map(x => x.line).join("\n")
-        let captured = [...metaStr.matchAll(re)].map((x) => {
-          return {
-            key: x[1].trim(),
-            val: x[2].trim(),
-          }
-        });
-        let metaChunks = metaStr.split(",").map(x => x.trim())
+
+        let negative
+        if (lines.length >= 3 && lines[lines.length-2].startsWith("Negative prompt:")) {
+          negative = true
+          items.push({
+            key: "Negative prompt",
+            val: lines[lines.length-2].replace(/Negative prompt:[ ]?/, "")
+          })
+        }
+
+        let promptStr
+        if (negative) {
+          promptStr = lines.slice(0, -2)
+        } else {
+          promptStr = lines.slice(0, -1)
+        }
+
         let attrs = {}
-        for(let kv of captured) {
+        for(let kv of items) {
           attrs[kv.key] = kv.val
         }
-        let promptStr = ""
-        for(let item of items) {
-          if (!re.test(item.line)) {
-            // reconstruct the line by appending each line followed by the delimiter
-            promptStr = promptStr + item.line + item.delimiter
-          } else {
-            break;
-          }
-        }
+
         attrs.prompt = promptStr
         if (attr) {
           if (attr.width) attrs.width = parseInt(attr.width)
