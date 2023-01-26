@@ -1,6 +1,6 @@
 {
   "name": "breadboard",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "",
   "email": "cocktailpeanuts@proton.me",
   "main": "main.js",
@@ -63,20 +63,8 @@
   "author": "https://twitter.com/cocktailpeanut",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.2.2",
-    "ejs": "^3.1.8",
-    "electron-context-menu": "^3.6.1",
-    "escape-html": "^1.0.3",
-    "exifr": "^7.1.3",
-    "express": "^4.18.2",
-    "fast-xml-parser": "^4.0.12",
-    "fastq": "^1.14.0",
-    "fdir": "^5.3.0",
-    "getport": "^0.1.0",
-    "js-yaml": "^4.1.0",
-    "picomatch": "^2.3.1",
-    "png-metadata": "^1.0.2",
-    "xml-formatter": "^3.2.0"
+    "breadmachine": "^0.0.6",
+    "electron-context-menu": "^3.6.1"
   },
   "devDependencies": {
     "electron": "^22.0.0",
