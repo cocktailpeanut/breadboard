@@ -8,6 +8,8 @@ Browse, search, and manage all AI generated images on your machine, in one place
 2. **Search:** Quickly search images by prompt
 3. **Manage:** select and bulk delete files, drag and drop to any other app for seamless integrated workflows.
 
+![https://breadboard.me/docs/bb.gif](https://breadboard.me/docs/bb.gif)
+
 <br>
 
 # Manual
