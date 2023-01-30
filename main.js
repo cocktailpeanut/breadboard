@@ -2,6 +2,7 @@ const {app, shell, BrowserWindow, ipcMain, dialog, session, clipboard } = requir
 const contextMenu = require('electron-context-menu');
 const path = require("path")
 const Breadmachine = require('breadmachine')
+const packagejson = require('./package.json')
 const is_mac = process.platform.startsWith("darwin")
 contextMenu({ showSaveImageAs: true });
 var mainWindow;
@@ -51,6 +52,7 @@ app.whenReady().then(async () => {
   await breadmachine.init({
     theme,
     config: path.resolve(__dirname, "breadboard.yaml"),
+    version: packagejson.version,
     releases: {
       feed: "https://github.com/cocktailpeanut/breadboard/releases.atom",
       url: "https://github.com/cocktailpeanut/breadboard/releases"

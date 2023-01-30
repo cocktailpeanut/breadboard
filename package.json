@@ -63,7 +63,7 @@
   "author": "https://twitter.com/cocktailpeanut",
   "license": "MIT",
   "dependencies": {
-    "breadmachine": "^0.0.6",
+    "breadmachine": "^0.0.9",
     "electron-context-menu": "^3.6.1"
   },
   "devDependencies": {
