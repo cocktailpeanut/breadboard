@@ -93,8 +93,9 @@ app.whenReady().then(async () => {
       })
       breadmachine.ipc[session].handle('pinned', (_session) => {
         let win = wins[_session]
+        let ontop = win.isAlwaysOnTop()
         if (win) {
-          return { pinned: win.isAlwaysOnTop() }
+          return { pinned: ontop }
         } else {
           return { pinned: false }
         }
