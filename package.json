@@ -1,6 +1,6 @@
 {
   "name": "breadboard",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "",
   "email": "cocktailpeanuts@proton.me",
   "main": "main.js",
@@ -63,7 +63,7 @@
   "author": "https://twitter.com/cocktailpeanut",
   "license": "MIT",
   "dependencies": {
-    "breadmachine": "^0.1.1",
+    "breadmachine": "^0.1.2",
     "electron-context-menu": "^3.6.1"
   },
   "devDependencies": {
