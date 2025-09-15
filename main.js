@@ -1,10 +1,11 @@
 const {app, shell, BrowserWindow, ipcMain, dialog, clipboard } = require('electron')
-const contextMenu = require('electron-context-menu');
 const path = require("path")
 const Breadmachine = require('breadmachine')
 const packagejson = require('./package.json')
 const is_mac = process.platform.startsWith("darwin")
-contextMenu({ showSaveImageAs: true });
+
+// Initialize context menu after app is ready
+let contextMenuInitialized = false;
 var mainWindow;
 var root_url;
 var wins = {}
@@ -51,6 +52,17 @@ class Socket {
 }
 const breadmachine = new Breadmachine();
 app.whenReady().then(async () => {
+  // Initialize context menu with dynamic import for ES module compatibility
+  if (!contextMenuInitialized) {
+    try {
+      const contextMenu = await import('electron-context-menu');
+      contextMenu.default({ showSaveImageAs: true });
+      contextMenuInitialized = true;
+    } catch (error) {
+      console.log('Error loading context menu:', error);
+    }
+  }
+
   await breadmachine.init({
     theme,
     config: path.resolve(__dirname, "breadboard.yaml"),

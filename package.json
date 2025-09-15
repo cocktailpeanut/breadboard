@@ -64,10 +64,10 @@
   "license": "MIT",
   "dependencies": {
     "breadmachine": "^0.1.5",
-    "electron-context-menu": "^3.6.1"
+    "electron-context-menu": "^4.1.1"
   },
   "devDependencies": {
-    "electron": "^22.0.0",
-    "electron-builder": "^23.6.0"
+    "electron": "^38.1.0",
+    "electron-builder": "^26.0.12"
   }
 }
