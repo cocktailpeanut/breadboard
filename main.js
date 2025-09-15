@@ -171,7 +171,9 @@ app.whenReady().then(async () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow(breadmachine.port)
   })
   app.on('window-all-closed', function () {
-    if (process.platform !== 'darwin') app.quit()
+    // Always quit the app when all windows are closed
+    // This ensures the Electron backend terminates properly
+    app.quit()
   })
 
 })
