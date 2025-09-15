@@ -1,10 +1,35 @@
 const {app, shell, BrowserWindow, ipcMain, dialog, clipboard } = require('electron')
 const contextMenu = require('electron-context-menu');
 const path = require("path")
+const fs = require("fs")
 const Breadmachine = require('breadmachine')
 const packagejson = require('./package.json')
 const is_mac = process.platform.startsWith("darwin")
 contextMenu({ showSaveImageAs: true });
+
+// Simple window state persistence
+const getConfigPath = () => path.join(app.getPath('userData'), 'window-state.json');
+
+const loadWindowState = () => {
+  try {
+    const configPath = getConfigPath();
+    if (fs.existsSync(configPath)) {
+      return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    }
+  } catch (error) {
+    console.log('Error loading window state:', error);
+  }
+  return { width: 1200, height: 800, isMaximized: false };
+};
+
+const saveWindowState = (state) => {
+  try {
+    const configPath = getConfigPath();
+    fs.writeFileSync(configPath, JSON.stringify(state, null, 2));
+  } catch (error) {
+    console.log('Error saving window state:', error);
+  }
+};
 var mainWindow;
 var root_url;
 var wins = {}
@@ -32,17 +57,55 @@ const titleBarOverlay = (theme) => {
   }
 }
 function createWindow (port) {
+  // Load stored window state
+  const windowState = loadWindowState();
+
   mainWindow = new BrowserWindow({
 		titleBarStyle : "hidden",
 		titleBarOverlay : titleBarOverlay(),
     minWidth: 190,
+    width: windowState.width,
+    height: windowState.height,
+    x: windowState.x,
+    y: windowState.y,
+    show: false, // Don't show until ready to prevent visual flash
     webPreferences: {
       preload: path.join(__dirname, 'preload.js')
     },
   })
+
+  // Restore maximized state
+  if (windowState.isMaximized) {
+    mainWindow.maximize();
+  }
+
+  // Save window state when it changes
+  const saveState = () => {
+    if (!mainWindow.isDestroyed()) {
+      const bounds = mainWindow.getBounds();
+      const isMaximized = mainWindow.isMaximized();
+      saveWindowState({
+        width: bounds.width,
+        height: bounds.height,
+        x: bounds.x,
+        y: bounds.y,
+        isMaximized: isMaximized
+      });
+    }
+  };
+
+  mainWindow.on('resize', saveState);
+  mainWindow.on('move', saveState);
+  mainWindow.on('maximize', saveState);
+  mainWindow.on('unmaximize', saveState);
+
   root_url = `http://localhost:${port}`
   mainWindow.loadURL(root_url)
-  mainWindow.maximize();
+
+  // Show window once ready to prevent flash
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+  });
 }
 class Socket {
   push(msg) {
